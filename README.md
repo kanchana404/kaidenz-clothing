@@ -1,5 +1,10 @@
 # KAIDENZ Clothing – Next.js E-commerce UI
 
+
+<img width="1904" height="977" alt="image" src="https://github.com/user-attachments/assets/b3788328-7ea6-4855-962f-2e072a8bb0b9" />
+
+
+
 A modern, fully responsive e-commerce UI built with **Next.js 15**, **React 19**, and **Tailwind CSS 4**.  
 Features a beautiful hero section, mobile-friendly navigation with a dark-themed sheet menu, and reusable UI components.
 
