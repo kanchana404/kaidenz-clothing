@@ -1,103 +1,79 @@
-import Image from "next/image";
+"use client"
+import Image from 'next/image'
+import React, { useState, useEffect } from 'react'
+import Navbar from '@/components/ui/navbar'
+import FeaturedProductSection from '@/components/featured-product'
 
-export default function Home() {
+const Page = () => {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    setIsVisible(true);
+  }, []);
+
+  const handleButtonMouseEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const target = e.target as HTMLButtonElement;
+    target.style.boxShadow = '0 8px 30px rgba(255, 203, 116, 0.25)';
+  };
+
+  const handleButtonMouseLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const target = e.target as HTMLButtonElement;
+    target.style.boxShadow = '0 4px 20px rgba(255, 203, 116, 0.15)';
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className='w-full min-h-screen flex flex-col' style={{ backgroundColor: '#f6f6f6' }}>
+      <Navbar />
+      
+      <div className='flex w-full flex-1 items-center lg:flex-row flex-col'>
+        {/* Left: Hero Text */}
+        <div className='w-full lg:w-1/2 flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 gap-8 lg:gap-12 text-center py-8 lg:py-0 min-h-[80vh] lg:min-h-0'>
+          <div className={`transform transition-all duration-1000 ease-out ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+            <h1 className='text-7xl sm:text-8xl md:text-7xl lg:text-8xl xl:text-8xl font-light leading-[0.85] tracking-tight mb-4 lg:mb-6'>
+              <span className="block font-extralight" style={{ color: '#111111' }}>Discover Your</span>
+              <span className="block" style={{ color: '#ffcb74' }}>Style</span>
+              <span className="block font-extralight" style={{ color: '#111111' }}>with</span>
+              <span className="block font-bold" style={{ color: '#ffcb74' }}>KAIDENZ</span>
+            </h1>
+          </div>
+          
+          <div className={`transform transition-all duration-1000 ease-out delay-200 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+            <p className='text-lg sm:text-xl lg:text-2xl font-light leading-relaxed max-w-lg font-mono px-4 sm:px-0' style={{ color: '#555555' }}>
+              Discover the latest fashion trends that define your style. From streetwear to haute couture, express yourself boldly.
+            </p>
+          </div>
+          
+          <div className={`transform transition-all duration-1000 ease-out delay-400 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+            <button
+              className="px-8 sm:px-10 py-4 sm:py-5 text-base sm:text-lg font-medium rounded-none transition-all duration-300 hover:translate-y-[-2px] hover:shadow-xl border-2 border-transparent hover:border-black"
+              style={{
+                backgroundColor: '#ffcb74',
+                color: '#111111',
+                boxShadow: '0 4px 20px rgba(255, 203, 116, 0.15)'
+              }}
+              onMouseEnter={handleButtonMouseEnter}
+              onMouseLeave={handleButtonMouseLeave}
+            >
+              Shop Collection
+            </button>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+        
+        {/* Right: Hero Image - Hidden on small screens */}
+        <div className='w-1/2 lg:flex justify-center items-center relative hidden'>
+          <Image 
+            src="/bg_empty_hero.png"
+            className='-mt-20'
+            alt="Hero"
+            width={900}
+            height={900}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        </div>
+      </div>
+      
+      <FeaturedProductSection />
     </div>
-  );
+  )
 }
+
+export default Page
