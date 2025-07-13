@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react'
 import Navbar from '@/components/ui/navbar'
 import FeaturedProductSection from '@/components/featured-product'
 import Footer from '@/components/ui/footer';
+import NewArival from '@/components/new-arival'
+import PhoneLook from '@/components/phone-look'
 
 const Page = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -25,7 +27,7 @@ const Page = () => {
   return (
     <div className='w-full min-h-screen flex flex-col' style={{ backgroundColor: '#f6f6f6' }}>
       <div className="sticky top-0 z-50"><Navbar /></div>
-      
+
       <div className='flex w-full flex-1 items-center lg:flex-row flex-col'>
         {/* Left: Hero Text */}
         <div className='w-full lg:w-1/2 flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 gap-8 lg:gap-12 text-center py-8 lg:py-0 min-h-[80vh] lg:min-h-0'>
@@ -37,13 +39,13 @@ const Page = () => {
               <span className="block font-bold" style={{ color: '#ffcb74' }}>KAIDENZ</span>
             </h1>
           </div>
-          
+
           <div className={`transform transition-all duration-1000 ease-out delay-200 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
             <p className='text-lg sm:text-xl lg:text-2xl font-light leading-relaxed max-w-lg font-mono px-4 sm:px-0' style={{ color: '#555555' }}>
               Discover the latest fashion trends that define your style. From streetwear to haute couture, express yourself boldly.
             </p>
           </div>
-          
+
           <div className={`transform transition-all duration-1000 ease-out delay-400 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
             <button
               className="px-8 sm:px-10 py-4 sm:py-5 text-base sm:text-lg font-medium rounded-none transition-all duration-300 hover:translate-y-[-2px] hover:shadow-xl border-2 border-transparent hover:border-black"
@@ -59,10 +61,10 @@ const Page = () => {
             </button>
           </div>
         </div>
-        
+
         {/* Right: Hero Image - Hidden on small screens */}
         <div className='w-1/2 lg:flex justify-center items-center relative hidden'>
-          <Image 
+          <Image
             src="/bg_empty_hero.png"
             className='-mt-20'
             alt="Hero"
@@ -71,8 +73,10 @@ const Page = () => {
           />
         </div>
       </div>
-      
+
       <FeaturedProductSection />
+      <NewArival />
+      <PhoneLook />
       <Footer />
     </div>
   )
