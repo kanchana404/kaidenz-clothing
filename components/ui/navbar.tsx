@@ -107,12 +107,12 @@ const Navbar = () => {
 
                     {/* Sign In/Sign Up Buttons - Desktop */}
                     <div className="hidden md:flex items-center space-x-4">
-                        <button className="px-4 py-2 text-sm font-medium border border-[#ffcb74] rounded-lg hover:bg-[#ffcb74] hover:text-[#111111] transition-all duration-200">
+                        <Link href="/login" className="px-4 py-2 text-sm font-medium border border-[#ffcb74] rounded-lg hover:bg-[#ffcb74] hover:text-[#111111] transition-all duration-200">
                             Sign In
-                        </button>
-                        <button className="px-4 py-2 text-sm font-medium bg-[#ffcb74] text-[#111111] rounded-lg hover:bg-[#f6f6f6] transition-all duration-200">
+                        </Link>
+                        <Link href="/signup" className="px-4 py-2 text-sm font-medium bg-[#ffcb74] text-[#111111] rounded-lg hover:bg-[#f6f6f6] transition-all duration-200">
                             Sign Up
-                        </button>
+                        </Link>
                     </div>
 
                     {/* Mobile menu button and Sheet */}
@@ -138,12 +138,12 @@ const Navbar = () => {
                                         ))}
                                     </div>
                                     <div className="mt-auto flex flex-col gap-2 px-6 pb-6">
-                                        <button className="w-full px-4 py-2 text-base font-medium border border-[#ffcb74] rounded-lg hover:bg-[#ffcb74] hover:text-[#111111] transition-all duration-200">
+                                        <Link href="/login" className="w-full px-4 py-2 text-base font-medium border border-[#ffcb74] rounded-lg hover:bg-[#ffcb74] hover:text-[#111111] transition-all duration-200 text-center">
                                             Sign In
-                                        </button>
-                                        <button className="w-full px-4 py-2 text-base font-medium bg-[#ffcb74] text-[#111111] rounded-lg hover:bg-[#f6f6f6] transition-all duration-200">
+                                        </Link>
+                                        <Link href="/signup" className="w-full px-4 py-2 text-base font-medium bg-[#ffcb74] text-[#111111] rounded-lg hover:bg-[#f6f6f6] transition-all duration-200 text-center">
                                             Sign Up
-                                        </button>
+                                        </Link>
                                     </div>
                                 </div>
                             </SheetContent>

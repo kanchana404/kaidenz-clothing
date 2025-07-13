@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import Navbar from '@/components/ui/navbar';
+import Footer from '@/components/ui/footer';
 
 const ProductPage = () => {
   const [selectedSize, setSelectedSize] = useState('S');
@@ -28,7 +29,7 @@ const ProductPage = () => {
     {
       id: 1,
       title: 'Polo with Contrast Trims',
-      image: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=300&q=80',
+      image: '/p1.png',
       rating: 4.0,
       price: 212,
       originalPrice: 239,
@@ -37,21 +38,21 @@ const ProductPage = () => {
     {
       id: 2,
       title: 'Gradient Graphic T-shirt',
-      image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=300&q=80',
+      image: '/p2.png',
       rating: 3.6,
       price: 145
     },
     {
       id: 3,
       title: 'Polo with Tipping Details',
-      image: 'https://images.unsplash.com/photo-1564557287817-3785e38ec1f5?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=300&q=80',
+      image: '/p3.png',
       rating: 4.5,
       price: 180
     },
     {
       id: 4,
       title: 'Striped Jacket',
-      image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=300&q=80',
+      image: '/p4.png',
       rating: 5.0,
       price: 190,
       originalPrice: 210,
@@ -291,7 +292,7 @@ const ProductPage = () => {
 
         {/* Recommendations */}
         <div className="bg-white rounded-2xl p-8 lg:p-12 shadow-sm border border-gray-100 mt-8">
-          <h2 className="text-2xl font-light text-center mb-8 text-gray-900">You might also like</h2>
+          <h2 className="text-3xl font-light font-semibold text-center mb-8 text-gray-900">You might also <span className='text-[#ffcb74]'>like</span></h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {recommendations.map((item) => (
               <div key={item.id} className="group cursor-pointer">
@@ -325,8 +326,10 @@ const ProductPage = () => {
               </div>
             ))}
           </div>
+          
         </div>
       </div>
+      <Footer />
     </div>
   );
 };
