@@ -1,6 +1,7 @@
 import React from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 const featuredProducts = [
   {
@@ -43,54 +44,65 @@ const featuredProducts = [
 
 const HealthyFoodMenu = () => {
   return (
-    <div className="w-full bg-background py-20 px-4">
+    <div className="w-full bg-background py-16 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header Section */}
-        <div className="text-center mb-16">
-          <h1 className="text-5xl md:text-6xl font-bold text-foreground mb-6 leading-tight">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl md:text-5xl font-light text-foreground mb-4 leading-tight">
             Featured <span className="text-primary">Products</span>
           </h1>
-          <p className="text-lg text-muted-foreground font-mono max-w-2xl mx-auto leading-relaxed">
-            Elevate your wardrobe with our curated collection of modern essentials for every season and every style. Shop the latest trends in comfort and fashion.
+          <p className="text-base text-muted-foreground font-mono max-w-2xl mx-auto leading-relaxed">
+            Elevate your wardrobe with our curated collection of modern essentials for every season and every style.
           </p>
         </div>
 
         {/* Product Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {featuredProducts.map((item) => (
-            <div key={item.id} className="group cursor-pointer bg-card text-card-foreground rounded-3xl p-6 mb-6 transition-all duration-300 group-hover:scale-105 group-hover:shadow-xl flex flex-col justify-between">
+            <Link
+              key={item.id}
+              href={`/product/${item.id}`}
+              className="group cursor-pointer bg-card text-card-foreground rounded-2xl border border-gray-200 overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-105"
+            >
               {/* Image Container */}
-              <div className="aspect-square rounded-2xl overflow-hidden mb-4">
+              <div className="aspect-square bg-gray-50 overflow-hidden">
                 <img 
                   src={item.image} 
                   alt={item.name}
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                  className="w-full h-full object-contain p-6 transition-transform duration-300 group-hover:scale-110"
                 />
               </div>
 
               {/* Content */}
-              <div className="text-center mb-4">
-                <h3 className="text-xl font-semibold text-foreground mb-3">
-                  {item.name}
-                </h3>
-                <p className="text-sm text-muted-foreground font-mono mb-2 min-h-[40px]">{item.description}</p>
-              </div>
+              <div className="p-6">
+                <div className="mb-4">
+                  <h3 className="text-lg font-medium text-foreground mb-2">
+                    {item.name}
+                  </h3>
+                  <p className="text-sm text-muted-foreground font-mono min-h-[40px] leading-relaxed">
+                    {item.description}
+                  </p>
+                </div>
 
-              {/* Price and Add Button */}
-              <div className="flex justify-between items-center">
-                <span className="text-2xl font-bold text-primary">
-                  ${item.price.toFixed(2)}
-                </span>
-                <Button
-                  className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center p-0 hover:bg-primary/90"
-                  variant="default"
-                  aria-label={`Add ${item.name} to cart`}
-                >
-                  <Plus size={20} />
-                  <span className="sr-only">Add to Cart</span>
-                </Button>
+                {/* Price and Add Button */}
+                <div className="flex justify-between items-center">
+                  <span className="text-2xl font-medium text-foreground">
+                    ${item.price.toFixed(2)}
+                  </span>
+                  <Button
+                    className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center p-0 hover:bg-primary/90 transition-all duration-200"
+                    variant="default"
+                    aria-label={`Add ${item.name} to cart`}
+                    type="button"
+                    tabIndex={-1}
+                    onClick={e => e.preventDefault()}
+                  >
+                    <Plus size={18} />
+                    <span className="sr-only">Add to Cart</span>
+                  </Button>
+                </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>

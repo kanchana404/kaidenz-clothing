@@ -3,6 +3,7 @@ import Image from 'next/image'
 import React, { useState, useEffect } from 'react'
 import Navbar from '@/components/ui/navbar'
 import FeaturedProductSection from '@/components/featured-product'
+import Footer from '@/components/ui/footer';
 
 const Page = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -23,7 +24,7 @@ const Page = () => {
 
   return (
     <div className='w-full min-h-screen flex flex-col' style={{ backgroundColor: '#f6f6f6' }}>
-      <Navbar />
+      <div className="sticky top-0 z-50"><Navbar /></div>
       
       <div className='flex w-full flex-1 items-center lg:flex-row flex-col'>
         {/* Left: Hero Text */}
@@ -72,6 +73,7 @@ const Page = () => {
       </div>
       
       <FeaturedProductSection />
+      <Footer />
     </div>
   )
 }

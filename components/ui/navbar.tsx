@@ -63,28 +63,34 @@ const Navbar = () => {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent className="w-96 bg-[#2f2f2f] border border-[#ffcb74] p-6">
                                             <div className="grid grid-cols-3 gap-3">
-                                                {categories.map((category) => (
-                                                    <DropdownMenuItem
-                                                        key={category}
-                                                        className="text-[#f6f6f6] hover:bg-[#111111] hover:text-[#ffcb74] transition-all duration-200 flex items-center justify-between group cursor-pointer p-4 rounded-md"
-                                                    >
-                                                        <span className="text-sm font-medium">{category}</span>
-                                                        {/* Arrow animation */}
-                                                        <svg
-                                                            className="w-3 h-3 transform transition-transform duration-200 group-hover:translate-x-1"
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            viewBox="0 0 24 24"
+                                                {categories.map((category) => {
+                                                    // Slugify category name for URL
+                                                    const slug = category.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                                                    return (
+                                                        <DropdownMenuItem
+                                                            key={category}
+                                                            className="text-[#f6f6f6] hover:bg-[#111111] hover:text-[#ffcb74] transition-all duration-200 flex items-center justify-between group cursor-pointer p-4 rounded-md"
                                                         >
-                                                            <path
-                                                                strokeLinecap="round"
-                                                                strokeLinejoin="round"
-                                                                strokeWidth={2}
-                                                                d="M9 5l7 7-7 7"
-                                                            />
-                                                        </svg>
-                                                    </DropdownMenuItem>
-                                                ))}
+                                                            <Link href={`/categories/${slug}`} className="flex items-center w-full h-full">
+                                                                <span className="text-sm font-medium flex-1">{category}</span>
+                                                                {/* Arrow animation */}
+                                                                <svg
+                                                                    className="w-3 h-3 transform transition-transform duration-200 group-hover:translate-x-1"
+                                                                    fill="none"
+                                                                    stroke="currentColor"
+                                                                    viewBox="0 0 24 24"
+                                                                >
+                                                                    <path
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                        strokeWidth={2}
+                                                                        d="M9 5l7 7-7 7"
+                                                                    />
+                                                                </svg>
+                                                            </Link>
+                                                        </DropdownMenuItem>
+                                                    );
+                                                })}
                                             </div>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
