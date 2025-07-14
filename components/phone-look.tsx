@@ -8,7 +8,7 @@ const PhoneLook = () => {
                 {/* Safari Web Preview - left, takes most width */}
                 <div className="flex-1 flex items-center justify-start w-full max-w-5xl aspect-[1203/753]">
                     <Safari
-                        url="magicui.design"
+                        url="https://www.kaidenz.com"
                         className="w-full h-full drop-shadow-lg"
                         width={1203}
                         height={753}

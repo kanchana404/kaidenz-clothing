@@ -100,11 +100,11 @@ const Navbar = () => {
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 ) : (
-                                    <button className="relative px-3 py-2 text-sm font-medium transition-colors duration-200 hover:text-[#ffcb74] group">
+                                    <Link href={item.href} className="relative px-3 py-2 text-sm font-medium transition-colors duration-200 hover:text-[#ffcb74] group">
                                         {item.name}
                                         {/* Animated underline */}
                                         <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#ffcb74] transition-all duration-300 group-hover:w-full"></span>
-                                    </button>
+                                    </Link>
                                 )}
                             </div>
                         ))}
