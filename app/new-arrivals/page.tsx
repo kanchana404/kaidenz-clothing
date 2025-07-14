@@ -2,11 +2,9 @@
 
 import Image from 'next/image'
 import React from 'react'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Label } from '@/components/ui/label'
 import { Sheet, SheetTrigger, SheetContent } from '@/components/ui/sheet'
 import { Filter } from 'lucide-react'
@@ -38,7 +36,7 @@ const HeroSection = () => {
         <div className="text-center space-y-8 z-10">
           {/* Main heading */}
           <h1 className="text-5xl sm:text-7xl md:text-8xl font-light leading-tight">
-            New <span className="text-[#ffcb74] font-bold">Arrivals</span>
+            New <span className="text-[#ffcb74] font-semibold">Arrivals</span>
           </h1>
 
           {/* Subtitle */}
@@ -399,110 +397,113 @@ const ProductList = () => {
 
   // Filter UI as a component for reuse
   const FilterCard = (
-    <Card className="bg-card border border-border w-full lg:w-80">
-      <CardHeader>
-        <h2 className="text-xl font-semibold mb-2">Filters</h2>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-8">
-        {/* Search Filter */}
-        <div>
-          <Label htmlFor="search" className="mb-2 block">Search</Label>
-          <input
-            id="search"
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search products..."
-            className="w-full border rounded-md px-3 py-2 text-base shadow-xs outline-none focus:ring-2 focus:ring-primary"
-          />
-        </div>
-        {/* Price Filter */}
-        <div>
-          <Label htmlFor="price-range" className="mb-2 block">Price (up to ${price})</Label>
-          <input
-            id="price-range"
-            type="range"
-            min={10}
-            max={100}
-            step={1}
-            value={price}
-            onChange={(e) => setPrice(Number(e.target.value))}
-            className="w-full accent-primary"
-            aria-label="Price range"
-          />
-          <div className="flex justify-between text-xs text-muted-foreground mt-1">
-            <span>$10</span>
-            <span>$100</span>
+    <div>
+     
+      <Card className="bg-card border border-border w-full lg:w-80">
+        <CardHeader>
+          <h2 className="text-xl font-semibold mb-2">Filters</h2>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-8">
+          {/* Search Filter */}
+          <div>
+            <Label htmlFor="search" className="mb-2 block">Search</Label>
+            <input
+              id="search"
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search products..."
+              className="w-full border rounded-md px-3 py-2 text-base shadow-xs outline-none focus:ring-2 focus:ring-primary"
+            />
           </div>
-        </div>
-        {/* Size Filter */}
-        <div>
-          <Label className="mb-2 block">Size</Label>
-          <div className="flex flex-wrap gap-2">
-            {allSizes.map((size) => (
-              <Button
-                key={size}
-                variant={selectedSizes.includes(size) ? 'default' : 'outline'}
-                className="px-4 py-2 text-sm rounded-md"
-                onClick={() => handleSizeToggle(size)}
-                type="button"
-              >
-                {size}
-              </Button>
-            ))}
+          {/* Price Filter */}
+          <div>
+            <Label htmlFor="price-range" className="mb-2 block">Price (up to ${price})</Label>
+            <input
+              id="price-range"
+              type="range"
+              min={10}
+              max={100}
+              step={1}
+              value={price}
+              onChange={(e) => setPrice(Number(e.target.value))}
+              className="w-full accent-primary"
+              aria-label="Price range"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground mt-1">
+              <span>$10</span>
+              <span>$100</span>
+            </div>
           </div>
-        </div>
-        {/* Color Filter */}
-        <div>
-          <Label className="mb-2 block">Color</Label>
-          <div className="flex flex-wrap gap-2">
-            {allColors.map((color) => (
-              <Button
-                key={color}
-                variant={selectedColors.includes(color) ? 'default' : 'outline'}
-                className="px-4 py-2 text-sm rounded-md"
-                onClick={() => handleColorToggle(color)}
-                type="button"
-                style={{ backgroundColor: selectedColors.includes(color) ? color.toLowerCase() : undefined, color: selectedColors.includes(color) ? '#fff' : undefined }}
-              >
-                {color}
-              </Button>
-            ))}
+          {/* Size Filter */}
+          <div>
+            <Label className="mb-2 block">Size</Label>
+            <div className="flex flex-wrap gap-2">
+              {allSizes.map((size) => (
+                <Button
+                  key={size}
+                  variant={selectedSizes.includes(size) ? 'default' : 'outline'}
+                  className="px-4 py-2 text-sm rounded-md"
+                  onClick={() => handleSizeToggle(size)}
+                  type="button"
+                >
+                  {size}
+                </Button>
+              ))}
+            </div>
           </div>
-        </div>
-        {/* Stock Filter */}
-        <div>
-          <Label className="mb-2 block">Stock</Label>
-          <div className="flex flex-col gap-2">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={stock.available}
-                onChange={() => handleStockToggle('available')}
-                className="accent-primary rounded"
-              />
-              <span>Available</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={stock.out}
-                onChange={() => handleStockToggle('out')}
-                className="accent-primary rounded"
-              />
-              <span>Out of Stock</span>
-            </label>
+          {/* Color Filter */}
+          <div>
+            <Label className="mb-2 block">Color</Label>
+            <div className="flex flex-wrap gap-2">
+              {allColors.map((color) => (
+                <Button
+                  key={color}
+                  variant={selectedColors.includes(color) ? 'default' : 'outline'}
+                  className="px-4 py-2 text-sm rounded-md"
+                  onClick={() => handleColorToggle(color)}
+                  type="button"
+                  style={{ backgroundColor: selectedColors.includes(color) ? color.toLowerCase() : undefined, color: selectedColors.includes(color) ? '#fff' : undefined }}
+                >
+                  {color}
+                </Button>
+              ))}
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+          {/* Stock Filter */}
+          <div>
+            <Label className="mb-2 block">Stock</Label>
+            <div className="flex flex-col gap-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={stock.available}
+                  onChange={() => handleStockToggle('available')}
+                  className="accent-primary rounded"
+                />
+                <span>Available</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={stock.out}
+                  onChange={() => handleStockToggle('out')}
+                  className="accent-primary rounded"
+                />
+                <span>Out of Stock</span>
+              </label>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 
   return (
     <div className="w-full px-2 sm:px-4 py-12">
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
         {/* Sidebar */}
-        <aside className="lg:col-span-1 mb-8 lg:mb-0 flex flex-col items-stretch min-w-0 lg:min-w-[320px] max-w-full">
+        <aside className="lg:col-span-1 mb-8 lg:mb-0 flex flex-col items-stretch min-w-0 lg:min-w-[320px] max-w-full lg:sticky lg:top-24">
           {/* Show filter button on small screens */}
           <div className="block lg:hidden mb-4">
             <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
@@ -613,6 +614,9 @@ const ProductList = () => {
         </aside>
         {/* Product Grid */}
         <section className="lg:col-span-4 w-full">
+          <div className="w-full flex justify-center mb-8">
+            <h1 className="text-3xl sm:text-4xl font-bold text-center">The best products are here</h1>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
             {paginatedProducts.length === 0 ? (
               <div className="col-span-full text-center text-muted-foreground py-16 text-lg">No products found.</div>
