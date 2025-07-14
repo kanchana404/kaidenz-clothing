@@ -6,6 +6,8 @@ import { Label } from '@/components/ui/label';
 import Navbar from '@/components/ui/navbar';
 import Link from 'next/link';
 import Footer from '@/components/ui/footer';
+import { Sheet, SheetTrigger, SheetContent } from '@/components/ui/sheet';
+import { Filter } from 'lucide-react';
 
 const products = [
   {
@@ -55,6 +57,7 @@ const CategoryPage = () => {
   const [price, setPrice] = useState(50);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [stock, setStock] = useState<{ available: boolean; out: boolean }>({ available: false, out: false });
+  const [filterOpen, setFilterOpen] = useState(false);
 
   const handleSizeToggle = (size: string) => {
     setSelectedSizes((prev) =>
@@ -78,80 +81,162 @@ const CategoryPage = () => {
     return matchesPrice && matchesSize && matchesStock;
   });
 
+  // Filter UI as a component for reuse
+  const FilterCard = (
+    <Card className="bg-card border border-border">
+      <CardHeader>
+        <h2 className="text-xl font-semibold mb-2">Filters</h2>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-8">
+        {/* Price Filter */}
+        <div>
+          <Label htmlFor="price-range" className="mb-2 block">Price (up to ${price})</Label>
+          <input
+            id="price-range"
+            type="range"
+            min={10}
+            max={100}
+            step={1}
+            value={price}
+            onChange={(e) => setPrice(Number(e.target.value))}
+            className="w-full accent-primary"
+            aria-label="Price range"
+          />
+          <div className="flex justify-between text-xs text-muted-foreground mt-1">
+            <span>$10</span>
+            <span>$100</span>
+          </div>
+        </div>
+        {/* Size Filter */}
+        <div>
+          <Label className="mb-2 block">Size</Label>
+          <div className="flex flex-wrap gap-2">
+            {allSizes.map((size) => (
+              <Button
+                key={size}
+                variant={selectedSizes.includes(size) ? 'default' : 'outline'}
+                className="px-4 py-2 text-sm rounded-md"
+                onClick={() => handleSizeToggle(size)}
+                type="button"
+              >
+                {size}
+              </Button>
+            ))}
+          </div>
+        </div>
+        {/* Stock Filter */}
+        <div>
+          <Label className="mb-2 block">Stock</Label>
+          <div className="flex flex-col gap-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={stock.available}
+                onChange={() => handleStockToggle('available')}
+                className="accent-primary rounded"
+              />
+              <span>Available</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={stock.out}
+                onChange={() => handleStockToggle('out')}
+                className="accent-primary rounded"
+              />
+              <span>Out of Stock</span>
+            </label>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="min-h-screen bg-background w-full">
       <Navbar />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
           {/* Sidebar */}
+          {/* Mobile Filter Button & Sheet */}
           <aside className="lg:col-span-1 mb-8 lg:mb-0">
-            <Card className="bg-card border border-border">
-              <CardHeader>
-                <h2 className="text-xl font-semibold mb-2">Filters</h2>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-8">
-                {/* Price Filter */}
-                <div>
-                  <Label htmlFor="price-range" className="mb-2 block">Price (up to ${price})</Label>
-                  <input
-                    id="price-range"
-                    type="range"
-                    min={10}
-                    max={100}
-                    step={1}
-                    value={price}
-                    onChange={(e) => setPrice(Number(e.target.value))}
-                    className="w-full accent-primary"
-                    aria-label="Price range"
-                  />
-                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                    <span>$10</span>
-                    <span>$100</span>
-                  </div>
-                </div>
-                {/* Size Filter */}
-                <div>
-                  <Label className="mb-2 block">Size</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {allSizes.map((size) => (
-                      <Button
-                        key={size}
-                        variant={selectedSizes.includes(size) ? 'default' : 'outline'}
-                        className="px-4 py-2 text-sm rounded-md"
-                        onClick={() => handleSizeToggle(size)}
-                        type="button"
-                      >
-                        {size}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-                {/* Stock Filter */}
-                <div>
-                  <Label className="mb-2 block">Stock</Label>
-                  <div className="flex flex-col gap-2">
-                    <label className="flex items-center gap-2 cursor-pointer">
+            {/* Show filter button on small screens */}
+            <div className="block lg:hidden mb-4">
+              <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
+                <SheetTrigger asChild>
+                  <Button className="w-full flex items-center gap-2" variant="outline" onClick={() => setFilterOpen(true)}>
+                    <Filter className="w-4 h-4" />
+                    Filters
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="max-w-xs w-full p-0 bg-white text-foreground">
+                  <div className="p-4 flex flex-col gap-8">
+                    {/* Price Filter */}
+                    <div>
+                      <Label htmlFor="price-range" className="mb-2 block">Price (up to ${price})</Label>
                       <input
-                        type="checkbox"
-                        checked={stock.available}
-                        onChange={() => handleStockToggle('available')}
-                        className="accent-primary rounded"
+                        id="price-range"
+                        type="range"
+                        min={10}
+                        max={100}
+                        step={1}
+                        value={price}
+                        onChange={(e) => setPrice(Number(e.target.value))}
+                        className="w-full accent-primary"
+                        aria-label="Price range"
                       />
-                      <span>Available</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={stock.out}
-                        onChange={() => handleStockToggle('out')}
-                        className="accent-primary rounded"
-                      />
-                      <span>Out of Stock</span>
-                    </label>
+                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                        <span>$10</span>
+                        <span>$100</span>
+                      </div>
+                    </div>
+                    {/* Size Filter */}
+                    <div>
+                      <Label className="mb-2 block">Size</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {allSizes.map((size) => (
+                          <Button
+                            key={size}
+                            variant={selectedSizes.includes(size) ? 'default' : 'outline'}
+                            className="px-4 py-2 text-sm rounded-md"
+                            onClick={() => handleSizeToggle(size)}
+                            type="button"
+                          >
+                            {size}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Stock Filter */}
+                    <div>
+                      <Label className="mb-2 block">Stock</Label>
+                      <div className="flex flex-col gap-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={stock.available}
+                            onChange={() => handleStockToggle('available')}
+                            className="accent-primary rounded"
+                          />
+                          <span>Available</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={stock.out}
+                            onChange={() => handleStockToggle('out')}
+                            className="accent-primary rounded"
+                          />
+                          <span>Out of Stock</span>
+                        </label>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </SheetContent>
+              </Sheet>
+            </div>
+            {/* Show sidebar on large screens */}
+            <div className="hidden lg:block">{FilterCard}</div>
           </aside>
 
           {/* Product Grid */}

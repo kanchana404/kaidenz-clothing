@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Sheet, SheetTrigger, SheetContent } from "@/components/ui/sheet"
 import Link from 'next/link'
+import { useState } from 'react';
 
 const Navbar = () => {
     const categories = [
@@ -30,6 +31,7 @@ const Navbar = () => {
         { name: 'About', href: '/about' },
         { name: 'Contact', href: '/contact' }
     ]
+    const [mobileCategoriesOpen, setMobileCategoriesOpen] = useState(false);
 
     return (
         <nav className="relative bg-[#111111] text-[#f6f6f6] shadow-lg">
@@ -131,11 +133,48 @@ const Navbar = () => {
                                         <Image src="/logo_light.png" alt="KAIDENZ Logo" width={120} height={120} priority />
                                     </div>
                                     <div className="flex flex-col gap-2 px-6">
-                                        {navItems.map((item) => (
-                                            <button key={item.name} className="w-full text-left py-3 px-2 text-lg font-medium hover:text-[#ffcb74] transition-colors duration-200 border-b border-[#2f2f2f] last:border-b-0">
-                                                {item.name}
-                                            </button>
-                                        ))}
+                                        {navItems.map((item) => {
+                                            if (item.hasDropdown) {
+                                                return (
+                                                    <div key={item.name}>
+                                                        <button
+                                                            className="w-full text-left py-3 px-2 text-lg font-medium hover:text-[#ffcb74] transition-colors duration-200 border-b border-[#2f2f2f] last:border-b-0 flex items-center justify-between"
+                                                            onClick={() => setMobileCategoriesOpen((open) => !open)}
+                                                        >
+                                                            <span>{item.name}</span>
+                                                            <svg className={`w-4 h-4 ml-2 transition-transform duration-200 ${mobileCategoriesOpen ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                            </svg>
+                                                        </button>
+                                                        {mobileCategoriesOpen && (
+                                                            <div className="pl-4 pb-2">
+                                                                {categories.map((category) => {
+                                                                    const slug = category.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                                                                    return (
+                                                                        <Link
+                                                                            key={category}
+                                                                            href={`/categories/${slug}`}
+                                                                            className="block py-2 px-2 text-base hover:text-[#ffcb74] transition-colors duration-200"
+                                                                        >
+                                                                            {category}
+                                                                        </Link>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            }
+                                            return (
+                                                <Link
+                                                    key={item.name}
+                                                    href={item.href}
+                                                    className="w-full text-left py-3 px-2 text-lg font-medium hover:text-[#ffcb74] transition-colors duration-200 border-b border-[#2f2f2f] last:border-b-0"
+                                                >
+                                                    {item.name}
+                                                </Link>
+                                            );
+                                        })}
                                     </div>
                                     <div className="mt-auto flex flex-col gap-2 px-6 pb-6">
                                         <Link href="/login" className="w-full px-4 py-2 text-base font-medium border border-[#ffcb74] rounded-lg hover:bg-[#ffcb74] hover:text-[#111111] transition-all duration-200 text-center">
