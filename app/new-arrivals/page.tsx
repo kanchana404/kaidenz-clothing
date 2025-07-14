@@ -615,7 +615,7 @@ const ProductList = () => {
         {/* Product Grid */}
         <section className="lg:col-span-4 w-full">
           <div className="w-full flex justify-center mb-8">
-            <h1 className="text-3xl sm:text-4xl font-bold text-center">The best products are here</h1>
+            <h1 className="text-3xl sm:text-4xl font-semibold text-center">The best <span className="text-[#ffcb74]">products</span> are here.</h1>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
             {paginatedProducts.length === 0 ? (
