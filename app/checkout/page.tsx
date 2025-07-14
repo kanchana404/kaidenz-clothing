@@ -1,7 +1,6 @@
 "use client"
 import React, { useState } from 'react';
 import Image from 'next/image';
-import Navbar from '@/components/ui/navbar';
 import { Minus, Plus, Lock, Star, HelpCircle, Mail, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -129,7 +128,6 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground w-full flex flex-col">
-      <Navbar />
       {/* Progress Indicator */}
       <div className="w-full bg-card border-b border-border py-3 flex items-center justify-center gap-4">
         <div className="flex items-center gap-2">

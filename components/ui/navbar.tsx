@@ -1,3 +1,5 @@
+"use client";
+
 import Image from 'next/image'
 import React from 'react'
 import {
@@ -32,6 +34,7 @@ const Navbar = () => {
         { name: 'Contact', href: '/contact' }
     ]
     const [mobileCategoriesOpen, setMobileCategoriesOpen] = useState(false);
+    const [open, setOpen] = useState(false); // Sheet open state
 
     return (
         <nav className="relative bg-[#111111] text-[#f6f6f6] shadow-lg">
@@ -119,7 +122,7 @@ const Navbar = () => {
 
                     {/* Mobile menu button and Sheet */}
                     <div className="md:hidden">
-                        <Sheet>
+                        <Sheet open={open} onOpenChange={setOpen}>
                             <SheetTrigger asChild>
                                 <button className="p-2 rounded-md hover:bg-[#2f2f2f] transition-colors duration-200" aria-label="Open menu" title="Open menu">
                                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -155,6 +158,7 @@ const Navbar = () => {
                                                                             key={category}
                                                                             href={`/categories/${slug}`}
                                                                             className="block py-2 px-2 text-base hover:text-[#ffcb74] transition-colors duration-200"
+                                                                            onClick={() => setOpen(false)}
                                                                         >
                                                                             {category}
                                                                         </Link>
@@ -170,6 +174,7 @@ const Navbar = () => {
                                                     key={item.name}
                                                     href={item.href}
                                                     className="w-full text-left py-3 px-2 text-lg font-medium hover:text-[#ffcb74] transition-colors duration-200 border-b border-[#2f2f2f] last:border-b-0"
+                                                    onClick={() => setOpen(false)}
                                                 >
                                                     {item.name}
                                                 </Link>
@@ -177,10 +182,14 @@ const Navbar = () => {
                                         })}
                                     </div>
                                     <div className="mt-auto flex flex-col gap-2 px-6 pb-6">
-                                        <Link href="/login" className="w-full px-4 py-2 text-base font-medium border border-[#ffcb74] rounded-lg hover:bg-[#ffcb74] hover:text-[#111111] transition-all duration-200 text-center">
+                                        <Link href="/login" className="w-full px-4 py-2 text-base font-medium border border-[#ffcb74] rounded-lg hover:bg-[#ffcb74] hover:text-[#111111] transition-all duration-200 text-center"
+                                            onClick={() => setOpen(false)}
+                                        >
                                             Sign In
                                         </Link>
-                                        <Link href="/signup" className="w-full px-4 py-2 text-base font-medium bg-[#ffcb74] text-[#111111] rounded-lg hover:bg-[#f6f6f6] transition-all duration-200 text-center">
+                                        <Link href="/signup" className="w-full px-4 py-2 text-base font-medium bg-[#ffcb74] text-[#111111] rounded-lg hover:bg-[#f6f6f6] transition-all duration-200 text-center"
+                                            onClick={() => setOpen(false)}
+                                        >
                                             Sign Up
                                         </Link>
                                     </div>

@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import Navbar from '@/components/ui/navbar';
 import Link from 'next/link';
 import Footer from '@/components/ui/footer';
 import { Sheet, SheetTrigger, SheetContent } from '@/components/ui/sheet';
@@ -154,7 +153,6 @@ const CategoryPage = () => {
 
   return (
     <div className="min-h-screen bg-background w-full">
-      <Navbar />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
           {/* Sidebar */}

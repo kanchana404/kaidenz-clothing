@@ -2,7 +2,6 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import Navbar from "@/components/ui/navbar";
 import Footer from "@/components/ui/footer";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -84,7 +83,6 @@ export default function CartPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <Navbar />
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
         <div className="mb-12">
@@ -109,13 +107,13 @@ export default function CartPage() {
                   <div key={item.id}>
                     <div className="flex gap-6 py-6">
                       {/* Product Image */}
-                      <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                      <div className="w-40 h-40 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
                         <Image 
                           src={item.image} 
                           alt={item.name} 
-                          width={96} 
-                          height={96} 
-                          className="object-contain w-20 h-20 bg-white rounded-md" 
+                          width={144} 
+                          height={144} 
+                          className="object-contain w-36 h-36 bg-white rounded-md" 
                         />
                       </div>
 
@@ -155,6 +153,8 @@ export default function CartPage() {
                         <button
                           onClick={() => removeItem(item.id)}
                           className="text-muted-foreground hover:text-destructive transition-colors p-1"
+                          aria-label={`Remove ${item.name} from cart`}
+                          title={`Remove ${item.name} from cart`}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
