@@ -11,6 +11,7 @@ import {
 import { Sheet, SheetTrigger, SheetContent } from "@/components/ui/sheet"
 import Link from 'next/link'
 import { useState } from 'react';
+import { SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
 
 const Navbar = () => {
     const categories = [
@@ -111,13 +112,31 @@ const Navbar = () => {
                     </div>
 
                     {/* Sign In/Sign Up Buttons - Desktop */}
-                    <div className="hidden md:flex items-center space-x-4">
-                        <Link href="/login" className="px-4 py-2 text-sm font-medium border border-[#ffcb74] rounded-lg hover:bg-[#ffcb74] hover:text-[#111111] transition-all duration-200">
+                    <div className="hidden md:flex items-center">
+                      <SignedIn>
+                        <Link href="/cart" className="relative mr-4" aria-label="Cart">
+                          <svg className="w-6 h-6 inline-block" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <circle cx="9" cy="21" r="1" />
+                            <circle cx="20" cy="21" r="1" />
+                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                          </svg>
+                          {/* Cart count badge */}
+                          <span className="absolute -top-2 -right-2 bg-primary text-white text-xs rounded-full px-1.5 py-0.5">
+                            2
+                          </span>
+                        </Link>
+                        <UserButton />
+                      </SignedIn>
+                      <SignedOut>
+                        <div className="items-center space-x-4">
+                          <Link href="/sign-in" className="px-4 py-2 text-sm font-medium border border-[#ffcb74] rounded-lg hover:bg-[#ffcb74] hover:text-[#111111] transition-all duration-200">
                             Sign In
-                        </Link>
-                        <Link href="/signup" className="px-4 py-2 text-sm font-medium bg-[#ffcb74] text-[#111111] rounded-lg hover:bg-[#f6f6f6] transition-all duration-200">
+                          </Link>
+                          <Link href="/sign-up" className="px-4 py-2 text-sm font-medium bg-[#ffcb74] text-[#111111] rounded-lg hover:bg-[#f6f6f6] transition-all duration-200">
                             Sign Up
-                        </Link>
+                          </Link>
+                        </div>
+                      </SignedOut>
                     </div>
 
                     {/* Mobile menu button and Sheet */}
@@ -182,16 +201,32 @@ const Navbar = () => {
                                         })}
                                     </div>
                                     <div className="mt-auto flex flex-col gap-2 px-6 pb-6">
-                                        <Link href="/login" className="w-full px-4 py-2 text-base font-medium border border-[#ffcb74] rounded-lg hover:bg-[#ffcb74] hover:text-[#111111] transition-all duration-200 text-center"
-                                            onClick={() => setOpen(false)}
-                                        >
-                                            Sign In
-                                        </Link>
-                                        <Link href="/signup" className="w-full px-4 py-2 text-base font-medium bg-[#ffcb74] text-[#111111] rounded-lg hover:bg-[#f6f6f6] transition-all duration-200 text-center"
-                                            onClick={() => setOpen(false)}
-                                        >
-                                            Sign Up
-                                        </Link>
+                                        <SignedOut>
+                                          <Link href="/sign-in" className="w-full px-4 py-2 text-base font-medium border border-[#ffcb74] rounded-lg hover:bg-[#ffcb74] hover:text-[#111111] transition-all duration-200 text-center"
+                                              onClick={() => setOpen(false)}
+                                          >
+                                              Sign In
+                                          </Link>
+                                          <Link href="/sign-up" className="w-full px-4 py-2 text-base font-medium bg-[#ffcb74] text-[#111111] rounded-lg hover:bg-[#f6f6f6] transition-all duration-200 text-center"
+                                              onClick={() => setOpen(false)}
+                                          >
+                                              Sign Up
+                                          </Link>
+                                        </SignedOut>
+                                        {/* Cart and UserButton for mobile */}
+                                        <SignedIn>
+                                          <div className="flex items-center justify-center gap-4 mt-4 md:hidden">
+                                            <Link href="/cart" className="relative" aria-label="Cart" onClick={() => setOpen(false)}>
+                                              <svg className="w-6 h-6 inline-block" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                                <circle cx="9" cy="21" r="1" />
+                                                <circle cx="20" cy="21" r="1" />
+                                                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                                              </svg>
+                                              <span className="absolute -top-2 -right-2 bg-primary text-white text-xs rounded-full px-1.5 py-0.5">2</span>
+                                            </Link>
+                                            <UserButton />
+                                          </div>
+                                        </SignedIn>
                                     </div>
                                 </div>
                             </SheetContent>
