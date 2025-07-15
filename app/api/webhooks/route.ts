@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
       const user_id = user.id;
       const email_address = user.email_addresses?.[0]?.email_address || null;
 
-      // Log only the minimal data
+      
       console.log("Minimal webhook data:", {
         first_name,
         last_name,
@@ -32,14 +32,55 @@ export async function POST(req: NextRequest) {
 
       switch (eventType) {
         case "user.created":
-        case "user.updated":
-        case "user.deleted":
+          // Log the data being sent to the external API
+          console.log("Sending user data to external API:", {
+            first_name,
+            last_name,
+            email_address,
+            user_id,
+          });
+          // Call external API with user data
+          await fetch("http://localhost:8080/kaidenz/SignUp", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              first_name,
+              last_name,
+              email_address,
+              user_id,
+            }),
+          });
           return NextResponse.json({
             first_name,
             last_name,
             email_address,
             user_id,
             event: eventType,
+          });
+        case "user.updated":
+        case "user.deleted":
+          // Call external API to delete user
+          const deleteRes = await fetch("http://localhost:8080/kaidenz/users/UserDelete", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ user_id }),
+          });
+          const deleteResText = await deleteRes.text();
+          console.log("External API user delete response:", {
+            status: deleteRes.status,
+            body: deleteResText,
+          });
+          return NextResponse.json({
+            user_id,
+            event: eventType,
+            externalApi: {
+              status: deleteRes.status,
+              body: deleteResText,
+            },
           });
         default:
           return NextResponse.json(
