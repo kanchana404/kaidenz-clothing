@@ -12,6 +12,9 @@ import { Sheet, SheetTrigger, SheetContent } from "@/components/ui/sheet"
 import Link from 'next/link'
 import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Minus, Plus, Trash2, ShoppingCart } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 
 const Navbar = () => {
     const categories = [
@@ -37,6 +40,33 @@ const Navbar = () => {
     const [mobileCategoriesOpen, setMobileCategoriesOpen] = useState(false);
     const [open, setOpen] = useState(false); // Sheet open state
     const [hasUser, setHasUser] = useState(false);
+    const [cart, setCart] = useState([
+        {
+            id: 1,
+            name: "Sentinel Jacket",
+            image: "/p1.png",
+            price: 49.0,
+            quantity: 1,
+            details: "Size: L\nColor: Gray",
+        },
+        {
+            id: 2,
+            name: "Boa Fleece Jacket",
+            image: "/p2.png",
+            price: 122.0,
+            quantity: 2,
+            details: "Size: L\nColor: Black Navy",
+        },
+    ]);
+    const [cartSheetOpen, setCartSheetOpen] = useState(false);
+
+    const updateQuantity = (id: number, delta: number) => {
+        setCart(prev => prev.map(item =>
+            item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item
+        ));
+    };
+    const totalCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+    const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
     useEffect(() => {
         // Check for user_id cookie client-side
@@ -135,6 +165,66 @@ const Navbar = () => {
                                 </Link>
                             </div>
                         )}
+                    </div>
+
+                    {/* Cart and UserButton for mobile */}
+                    <div className="hidden md:flex items-center ml-4">
+                        <Sheet open={cartSheetOpen} onOpenChange={setCartSheetOpen}>
+                            <SheetTrigger asChild>
+                                <button className="relative p-2 rounded-md hover:bg-[#2f2f2f] transition-colors duration-200" aria-label="Open cart" title="Open cart">
+                                    <ShoppingCart className="w-6 h-6" />
+                                    <span className="absolute -top-2 -right-2 bg-primary text-white text-xs rounded-full px-1.5 py-0.5">{totalCount}</span>
+                                </button>
+                            </SheetTrigger>
+                            <SheetContent side="right" className="p-0 bg-[#111111] text-[#f6f6f6] w-full max-w-md flex flex-col">
+                                <div className="flex-1 overflow-y-auto p-6">
+                                    <h2 className="text-xl font-semibold mb-6">Your Cart</h2>
+                                    {cart.map((item, index, arr) => (
+                                        <div key={item.id}>
+                                            <div className="flex gap-4 py-4">
+                                                <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                                                    <Image
+                                                        src={item.image}
+                                                        alt={item.name}
+                                                        width={64}
+                                                        height={64}
+                                                        className="object-contain w-14 h-14 bg-white rounded-md"
+                                                    />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <h3 className="font-medium text-base truncate">{item.name}</h3>
+                                                    <div className="text-xs text-muted-foreground mt-1 space-y-1">
+                                                        {item.details.split('\n').map((line, i) => (
+                                                            <div key={i}>{line}</div>
+                                                        ))}
+                                                    </div>
+                                                    <div className="flex items-center gap-2 mt-2">
+                                                        <Button variant="outline" size="icon" className="w-6 h-6 rounded-full border-muted-foreground/20 hover:border-muted-foreground/40 p-0" onClick={() => updateQuantity(item.id, -1)}><Minus className="w-3 h-3 text-black" /></Button>
+                                                        <span className="w-6 text-center font-medium">{item.quantity}</span>
+                                                        <Button variant="outline" size="icon" className="w-6 h-6 rounded-full border-muted-foreground/20 hover:border-muted-foreground/40 p-0" onClick={() => updateQuantity(item.id, 1)}><Plus className="w-3 h-3 text-black" /></Button>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col items-end justify-between">
+                                                    <button className="text-muted-foreground hover:text-destructive transition-colors p-1" aria-label={`Remove ${item.name} from cart`} title={`Remove ${item.name} from cart`}><Trash2 className="w-4 h-4" /></button>
+                                                    <div className="font-medium text-base mt-2">${(item.price * item.quantity).toFixed(2)}</div>
+                                                </div>
+                                            </div>
+                                            {index < arr.length - 1 && <Separator className="opacity-30" />}
+                                        </div>
+                                    ))}
+                                    {/* Subtotal */}
+                                    <div className="flex justify-between items-center mt-6 text-base font-medium">
+                                        <span>Subtotal</span>
+                                        <span>${subtotal.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                                <div className="p-4 border-t border-border">
+                                    <Link href="/cart" className="block w-full" onClick={() => setCartSheetOpen(false)}>
+                                        <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 py-3 font-medium rounded-lg">View Cart</Button>
+                                    </Link>
+                                </div>
+                            </SheetContent>
+                        </Sheet>
                     </div>
 
                     {/* Mobile menu button and Sheet */}
