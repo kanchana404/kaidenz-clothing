@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import React from 'react'
 import Link from 'next/link'
-import { SignIn } from '@clerk/nextjs'
+import { LoginForm } from '@/components/login-form'
 
 const page = () => {
     return (
@@ -10,15 +10,12 @@ const page = () => {
             <div className="absolute top-0 left-0 w-full flex items-center justify-between px-6 py-4 z-10">
                 <Link href="/" className="flex items-center gap-2">
                     <Image src="/bg_empty_logo.png" alt="Shop Logo" width={120} height={120} priority className="rounded" />
-
                 </Link>
-
             </div>
             {/* Left: Form and Headings */}
             <div className="w-full md:w-1/2 flex flex-col justify-center items-center px-6 py-8 gap-6 min-h-screen">
                 <div className="w-full max-w-sm mt-20 md:mt-0">
-                    
-                    <SignIn />
+                    <LoginForm />
                 </div>
             </div>
             {/* Right: Image */}

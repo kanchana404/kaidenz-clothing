@@ -10,8 +10,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Sheet, SheetTrigger, SheetContent } from "@/components/ui/sheet"
 import Link from 'next/link'
-import { useState } from 'react';
-import { SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
+import { useState, useEffect } from 'react';
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const Navbar = () => {
     const categories = [
@@ -36,6 +36,14 @@ const Navbar = () => {
     ]
     const [mobileCategoriesOpen, setMobileCategoriesOpen] = useState(false);
     const [open, setOpen] = useState(false); // Sheet open state
+    const [hasUser, setHasUser] = useState(false);
+
+    useEffect(() => {
+        // Check for user_id cookie client-side
+        if (typeof document !== 'undefined') {
+            setHasUser(document.cookie.split('; ').some(c => c.startsWith('user_id=')));
+        }
+    }, []);
 
     return (
         <nav className="relative bg-[#111111] text-[#f6f6f6] shadow-lg">
@@ -113,30 +121,20 @@ const Navbar = () => {
 
                     {/* Sign In/Sign Up Buttons - Desktop */}
                     <div className="hidden md:flex items-center">
-                      <SignedIn>
-                        <Link href="/cart" className="relative mr-4" aria-label="Cart">
-                          <svg className="w-6 h-6 inline-block" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                            <circle cx="9" cy="21" r="1" />
-                            <circle cx="20" cy="21" r="1" />
-                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-                          </svg>
-                          {/* Cart count badge */}
-                          <span className="absolute -top-2 -right-2 bg-primary text-white text-xs rounded-full px-1.5 py-0.5">
-                            2
-                          </span>
-                        </Link>
-                        <UserButton />
-                      </SignedIn>
-                      <SignedOut>
-                        <div className="items-center space-x-4">
-                          <Link href="/sign-in" className="px-4 py-2 text-sm font-medium border border-[#ffcb74] rounded-lg hover:bg-[#ffcb74] hover:text-[#111111] transition-all duration-200">
-                            Sign In
-                          </Link>
-                          <Link href="/sign-up" className="px-4 py-2 text-sm font-medium bg-[#ffcb74] text-[#111111] rounded-lg hover:bg-[#f6f6f6] transition-all duration-200">
-                            Sign Up
-                          </Link>
-                        </div>
-                      </SignedOut>
+                        {hasUser ? (
+                            <Avatar>
+                                <AvatarFallback>U</AvatarFallback>
+                            </Avatar>
+                        ) : (
+                            <div className="items-center space-x-4">
+                                <Link href="/sign-in" className="px-4 py-2 text-sm font-medium border border-[#ffcb74] rounded-lg hover:bg-[#ffcb74] hover:text-[#111111] transition-all duration-200">
+                                    Sign In
+                                </Link>
+                                <Link href="/sign-up" className="px-4 py-2 text-sm font-medium bg-[#ffcb74] text-[#111111] rounded-lg hover:bg-[#f6f6f6] transition-all duration-200">
+                                    Sign Up
+                                </Link>
+                            </div>
+                        )}
                     </div>
 
                     {/* Mobile menu button and Sheet */}
@@ -201,7 +199,8 @@ const Navbar = () => {
                                         })}
                                     </div>
                                     <div className="mt-auto flex flex-col gap-2 px-6 pb-6">
-                                        <SignedOut>
+                                        {/* You may want to add your own logic for showing user state based on a cookie in the future. */}
+                                        <div className="items-center space-x-4">
                                           <Link href="/sign-in" className="w-full px-4 py-2 text-base font-medium border border-[#ffcb74] rounded-lg hover:bg-[#ffcb74] hover:text-[#111111] transition-all duration-200 text-center"
                                               onClick={() => setOpen(false)}
                                           >
@@ -212,21 +211,18 @@ const Navbar = () => {
                                           >
                                               Sign Up
                                           </Link>
-                                        </SignedOut>
+                                        </div>
                                         {/* Cart and UserButton for mobile */}
-                                        <SignedIn>
-                                          <div className="flex items-center justify-center gap-4 mt-4 md:hidden">
-                                            <Link href="/cart" className="relative" aria-label="Cart" onClick={() => setOpen(false)}>
-                                              <svg className="w-6 h-6 inline-block" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                                <circle cx="9" cy="21" r="1" />
-                                                <circle cx="20" cy="21" r="1" />
-                                                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-                                              </svg>
-                                              <span className="absolute -top-2 -right-2 bg-primary text-white text-xs rounded-full px-1.5 py-0.5">2</span>
-                                            </Link>
-                                            <UserButton />
-                                          </div>
-                                        </SignedIn>
+                                        <div className="flex items-center justify-center gap-4 mt-4 md:hidden">
+                                          <Link href="/cart" className="relative" aria-label="Cart" onClick={() => setOpen(false)}>
+                                            <svg className="w-6 h-6 inline-block" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                              <circle cx="9" cy="21" r="1" />
+                                              <circle cx="20" cy="21" r="1" />
+                                              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                                            </svg>
+                                            <span className="absolute -top-2 -right-2 bg-primary text-white text-xs rounded-full px-1.5 py-0.5">2</span>
+                                          </Link>
+                                        </div>
                                     </div>
                                 </div>
                             </SheetContent>
