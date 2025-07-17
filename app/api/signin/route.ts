@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
     console.log("Incoming cookies:", cookieHeader);
 
     // Forward the request to the Java backend with credentials
+    console.log("Sending request to backend with cookies:", cookieHeader);
     const backendRes = await fetch("http://localhost:8080/kaidenz/SignIn", {
       method: "POST",
       headers: {
@@ -45,39 +46,39 @@ export async function POST(req: NextRequest) {
     console.log("=== COOKIE ANALYSIS ===");
     console.log("Single set-cookie header:", setCookieHeader);
     console.log("All set-cookie headers:", allSetCookies);
+    
+    // Try to get JSESSIONID from all Set-Cookie headers
+    let jsessionValue = null;
+    if (allSetCookies.length > 0) {
+      for (const cookie of allSetCookies) {
+        const match = cookie.match(/JSESSIONID=([^;]+)/);
+        if (match) {
+          jsessionValue = match[1];
+          console.log("Found JSESSIONID in Set-Cookie array:", jsessionValue);
+          break;
+        }
+      }
+    }
 
     // Create response
     const response = NextResponse.json(data, { status: backendRes.status });
     
-    // Extract and set JSESSIONID cookie for frontend domain
-    if (setCookieHeader) {
-      console.log("Processing Set-Cookie header:", setCookieHeader);
+    // Set JSESSIONID cookie if we found it
+    if (jsessionValue) {
+      console.log("Setting JSESSIONID cookie:", jsessionValue);
       
-      // Parse the Set-Cookie header to extract JSESSIONID
-      const cookies = setCookieHeader.split(',');
-      const jsessionCookie = cookies.find(cookie => 
-        cookie.trim().startsWith('JSESSIONID=')
-      );
+      // Set the JSESSIONID cookie for the frontend domain
+      response.cookies.set("JSESSIONID", jsessionValue, {
+        httpOnly: true,
+        path: "/",
+        secure: false, // Set to false for HTTP development
+        sameSite: "lax", // Use "lax" for HTTP development
+        maxAge: 3600
+      });
       
-      if (jsessionCookie) {
-        // Extract the JSESSIONID value
-        const jsessionMatch = jsessionCookie.match(/JSESSIONID=([^;]+)/);
-        if (jsessionMatch) {
-          const jsessionValue = jsessionMatch[1];
-          console.log("Extracted JSESSIONID value:", jsessionValue);
-          
-          // Set the JSESSIONID cookie for the frontend domain
-          response.cookies.set("JSESSIONID", jsessionValue, {
-            httpOnly: true,
-            path: "/",
-            secure: false, // Set to false for HTTP development
-            sameSite: "none",
-            maxAge: 3600
-          });
-          
-          console.log("Set JSESSIONID cookie for frontend domain");
-        }
-      }
+      console.log("Set JSESSIONID cookie for frontend domain");
+    } else {
+      console.log("No JSESSIONID found in any Set-Cookie headers");
     }
 
     // Set additional cookies for frontend use if signin is successful
@@ -88,8 +89,8 @@ export async function POST(req: NextRequest) {
       response.cookies.set("user_id", data.user_id, {
         httpOnly: false,
         path: "/",
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax",
+        secure: false, // Set to false for HTTP development
+        sameSite: "lax", // Use "lax" for HTTP development
         maxAge: 3600
       });
 
@@ -98,8 +99,8 @@ export async function POST(req: NextRequest) {
       response.cookies.set("user_status", userStatus, {
         httpOnly: false,
         path: "/",
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax",
+        secure: false, // Set to false for HTTP development
+        sameSite: "lax", // Use "lax" for HTTP development
         maxAge: 3600
       });
 
@@ -109,8 +110,8 @@ export async function POST(req: NextRequest) {
           response.cookies.set("user_email", data.email, {
             httpOnly: false,
             path: "/",
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax",
+            secure: false, // Set to false for HTTP development
+            sameSite: "lax", // Use "lax" for HTTP development
             maxAge: 3600
           });
         }
@@ -119,8 +120,8 @@ export async function POST(req: NextRequest) {
           response.cookies.set("user_first_name", data.first_name, {
             httpOnly: false,
             path: "/",
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax",
+            secure: false, // Set to false for HTTP development
+            sameSite: "lax", // Use "lax" for HTTP development
             maxAge: 3600
           });
         }
@@ -129,8 +130,8 @@ export async function POST(req: NextRequest) {
           response.cookies.set("user_last_name", data.last_name, {
             httpOnly: false,
             path: "/",
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax",
+            secure: false, // Set to false for HTTP development
+            sameSite: "lax", // Use "lax" for HTTP development
             maxAge: 3600
           });
         }
