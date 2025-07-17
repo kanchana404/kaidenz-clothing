@@ -7,17 +7,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const payload = JSON.stringify({ user_id, code });
-    console.log(payload);
-    
+    // Forward cookies from the incoming request (if any)
+    const cookieHeader = req.headers.get('cookie');
 
     const backendRes = await fetch('http://localhost:8080/kaidenz/VerifyAccount', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: payload
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cookieHeader && { Cookie: cookieHeader }),
+      },
+      credentials: 'include', // Important for cross-origin cookies!
+      body: JSON.stringify({ user_id, code }),
     });
+
     const data = await backendRes.json();
-    return NextResponse.json(data, { status: backendRes.status });
+
+    // Forward the Set-Cookie header from backend to browser
+    const setCookie = backendRes.headers.get('set-cookie');
+    const response = NextResponse.json(data, { status: backendRes.status });
+    if (setCookie) {
+      response.headers.set('set-cookie', setCookie);
+    }
+
+    return response;
   } catch {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   }
