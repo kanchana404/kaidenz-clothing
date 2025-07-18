@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import Footer from "@/components/ui/footer";
@@ -61,6 +61,43 @@ const RECOMMENDED = [
 
 export default function CartPage() {
   const [cart, setCart] = useState(DUMMY_CART);
+
+  // Send POST request to /api/cart (which forwards to /CheckSession) on page load
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        console.log("Cart page loaded - sending POST request to /api/cart");
+        const response = await fetch("/api/cart", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({}), // Empty POST request as requested
+        });
+
+        const data = await response.json();
+        console.log("Cart API response:", data);
+        
+        if (response.ok) {
+          if (data.authenticated) {
+            console.log("User is authenticated:", data);
+            // You can use the user data here
+            // data.user_id, data.email, data.first_name, data.last_name, etc.
+          } else {
+            console.log("User is not authenticated:", data.message);
+            // Handle unauthenticated user - maybe redirect to login
+          }
+        } else {
+          console.error("Cart API error:", data);
+        }
+      } catch (error) {
+        console.error("Error calling cart API:", error);
+      }
+    };
+
+    checkSession();
+  }, []);
 
   const updateQuantity = (id: number, delta: number) => {
     setCart((prev) =>

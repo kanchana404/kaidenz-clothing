@@ -12,7 +12,7 @@ import { Sheet, SheetTrigger, SheetContent } from "@/components/ui/sheet"
 import Link from 'next/link'
 import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Minus, Plus, Trash2, ShoppingCart } from "lucide-react";
+import { Minus, Plus, Trash2, ShoppingCart, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
@@ -69,9 +69,9 @@ const Navbar = () => {
     const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
     useEffect(() => {
-        // Check for user_id cookie client-side
+        // Check for JSESSIONID cookie client-side
         if (typeof document !== 'undefined') {
-            setHasUser(document.cookie.split('; ').some(c => c.startsWith('user_id=')));
+            setHasUser(document.cookie.split('; ').some(c => c.startsWith('JSESSIONID=')));
         }
     }, []);
 
@@ -152,9 +152,33 @@ const Navbar = () => {
                     {/* Sign In/Sign Up Buttons - Desktop */}
                     <div className="hidden md:flex items-center">
                         {hasUser ? (
-                            <Avatar>
-                                <AvatarFallback>U</AvatarFallback>
-                            </Avatar>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button className="hover:opacity-80 transition-opacity duration-200">
+                                        <Avatar className="border-2 border-[#ffcb74] hover:border-[#f6f6f6] transition-colors duration-200">
+                                            <AvatarFallback className="bg-[#444444] text-[#ffcb74]">U</AvatarFallback>
+                                        </Avatar>
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="w-56 bg-[#2f2f2f] border border-[#ffcb74] p-2">
+                                    <DropdownMenuItem asChild>
+                                        <Link href="/profile" className="text-[#f6f6f6] hover:bg-[#111111] hover:text-[#ffcb74] transition-all duration-200 flex items-center gap-2 cursor-pointer p-3 rounded-md">
+                                            <User className="w-4 h-4" />
+                                            <span>Profile</span>
+                                        </Link>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem asChild>
+                                        <Link href="/cart" className="text-[#f6f6f6] hover:bg-[#111111] hover:text-[#ffcb74] transition-all duration-200 flex items-center gap-2 cursor-pointer p-3 rounded-md">
+                                            <ShoppingCart className="w-4 h-4" />
+                                            <span>Cart</span>
+                                        </Link>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="text-[#ff4d4f] hover:bg-[#111111] hover:text-[#ff4d4f] transition-all duration-200 flex items-center gap-2 cursor-pointer p-3 rounded-md">
+                                        <LogOut className="w-4 h-4" />
+                                        <span>Sign Out</span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         ) : (
                             <div className="items-center space-x-4">
                                 <Link href="/sign-in" className="px-4 py-2 text-sm font-medium border border-[#ffcb74] rounded-lg hover:bg-[#ffcb74] hover:text-[#111111] transition-all duration-200">
@@ -289,19 +313,40 @@ const Navbar = () => {
                                         })}
                                     </div>
                                     <div className="mt-auto flex flex-col gap-2 px-6 pb-6">
-                                        {/* You may want to add your own logic for showing user state based on a cookie in the future. */}
-                                        <div className="items-center space-x-4">
-                                          <Link href="/sign-in" className="w-full px-4 py-2 text-base font-medium border border-[#ffcb74] rounded-lg hover:bg-[#ffcb74] hover:text-[#111111] transition-all duration-200 text-center"
-                                              onClick={() => setOpen(false)}
-                                          >
-                                              Sign In
-                                          </Link>
-                                          <Link href="/sign-up" className="w-full px-4 py-2 text-base font-medium bg-[#ffcb74] text-[#111111] rounded-lg hover:bg-[#f6f6f6] transition-all duration-200 text-center"
-                                              onClick={() => setOpen(false)}
-                                          >
-                                              Sign Up
-                                          </Link>
-                                        </div>
+                                        {hasUser ? (
+                                            <div className="space-y-3">
+                                                <Link href="/profile" className="w-full px-4 py-2 text-base font-medium border border-[#ffcb74] rounded-lg hover:bg-[#ffcb74] hover:text-[#111111] transition-all duration-200 text-center flex items-center justify-center gap-2"
+                                                    onClick={() => setOpen(false)}
+                                                >
+                                                    <User className="w-4 h-4" />
+                                                    Profile
+                                                </Link>
+                                                <button className="w-full px-4 py-2 text-base font-medium border border-[#ff4d4f] text-[#ff4d4f] rounded-lg hover:bg-[#ff4d4f] hover:text-[#f6f6f6] transition-all duration-200 text-center flex items-center justify-center gap-2"
+                                                    onClick={() => {
+                                                        document.cookie = 'JSESSIONID=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                                                        document.cookie = 'user_status=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                                                        setOpen(false);
+                                                        window.location.href = '/';
+                                                    }}
+                                                >
+                                                    <LogOut className="w-4 h-4" />
+                                                    Sign Out
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="items-center space-x-4">
+                                              <Link href="/sign-in" className="w-full px-4 py-2 text-base font-medium border border-[#ffcb74] rounded-lg hover:bg-[#ffcb74] hover:text-[#111111] transition-all duration-200 text-center"
+                                                  onClick={() => setOpen(false)}
+                                              >
+                                                  Sign In
+                                              </Link>
+                                              <Link href="/sign-up" className="w-full px-4 py-2 text-base font-medium bg-[#ffcb74] text-[#111111] rounded-lg hover:bg-[#f6f6f6] transition-all duration-200 text-center"
+                                                  onClick={() => setOpen(false)}
+                                              >
+                                                  Sign Up
+                                              </Link>
+                                            </div>
+                                        )}
                                         {/* Cart and UserButton for mobile */}
                                         <div className="flex items-center justify-center gap-4 mt-4 md:hidden">
                                           <Link href="/cart" className="relative" aria-label="Cart" onClick={() => setOpen(false)}>
