@@ -1,0 +1,28 @@
+INSERT INTO province (id, name) VALUES
+(1, 'Central Province'),
+(2, 'Eastern Province'),
+(3, 'Northern Province'),
+(4, 'North Central Province'),
+(5, 'North Western Province'),
+(6, 'Sabaragamuwa Province'),
+(7, 'Southern Province'),
+(8, 'Uva Province'),
+(9, 'Western Province');
+
+
+INSERT INTO city (id, name) VALUES
+(1, 'Colombo'),
+(2, 'Kandy'),
+(3, 'Galle'),
+(4, 'Jaffna'),
+(5, 'Negombo'),
+(6, 'Anuradhapura'),
+(7, 'Ratnapura'),
+(8, 'Trincomalee'),
+(9, 'Matara'),
+(10, 'Batticaloa'),
+(11, 'Badulla'),
+(12, 'Kurunegala'),
+(13, 'Polonnaruwa'),
+(14, 'Nuwara Eliya'),
+(15, 'Hambantota');

@@ -10,8 +10,6 @@ export function middleware(request: NextRequest) {
   // Get cookies from the request
   const cookies = request.cookies;
   const jsessionId = cookies.get('JSESSIONID')?.value;
-  const userId = cookies.get('user_id')?.value;
-  const userStatus = cookies.get('user_status')?.value;
 
   // Check if the route is protected
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
@@ -19,17 +17,20 @@ export function middleware(request: NextRequest) {
 
   // If accessing a protected route without authentication
   if (isProtectedRoute) {
-    // Check if user has valid session cookies
-    if (!jsessionId || !userId || userStatus !== 'verified') {
+    // Check if user has valid session cookie
+    if (!jsessionId) {
+      console.log(`Middleware: No JSESSIONID found for protected route ${pathname}, redirecting to sign-in`);
       // Redirect to login page
       const loginUrl = new URL('/sign-in', request.url);
       loginUrl.searchParams.set('redirect', pathname);
       return NextResponse.redirect(loginUrl);
     }
+    console.log(`Middleware: JSESSIONID found for protected route ${pathname}, allowing access`);
   }
 
   // If accessing auth routes while already authenticated
-  if (isAuthRoute && jsessionId && userId && userStatus === 'verified') {
+  if (isAuthRoute && jsessionId) {
+    console.log(`Middleware: JSESSIONID found for auth route ${pathname}, redirecting to home`);
     // Redirect to home page
     return NextResponse.redirect(new URL('/', request.url));
   }

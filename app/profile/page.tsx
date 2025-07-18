@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,12 +10,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { 
   User, 
   Mail, 
   Phone, 
   MapPin, 
-  Calendar, 
   Edit3, 
   Save, 
   X, 
@@ -31,10 +35,20 @@ interface UserData {
   id: string;
   name: string;
   email: string;
+  firstName?: string;
+  lastName?: string;
   phone?: string;
   address?: string;
-  joinDate: string;
+  province?: string;
+  city?: string;
+  postalCode?: string;
+  joinDate?: string;
   avatar?: string;
+  verificationRequired?: string;
+  status?: string;
+  authenticated?: boolean;
+  provinces?: Array<{ id: string; name: string }>;
+  cities?: Array<{ id: string; name: string; province_id?: string }>;
 }
 
 export default function ProfilePage() {
@@ -43,34 +57,164 @@ export default function ProfilePage() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [editForm, setEditForm] = useState<Partial<UserData>>({});
+  const [provinces, setProvinces] = useState<Array<{ id: string; name: string }>>([]);
+  const [cities, setCities] = useState<Array<{ id: string; name: string; province_id?: string }>>([]);
+  const [openProvince, setOpenProvince] = useState(false);
+  const [openCity, setOpenCity] = useState(false);
+  const [locationDataLoading, setLocationDataLoading] = useState(true);
+  const hasInitialized = useRef(false);
+
+  // Function to set provinces and cities from userinfo response
+  const setLocationDataFromUserInfo = (userInfoData: UserData) => {
+    if (userInfoData.provinces) {
+      setProvinces(userInfoData.provinces);
+      console.log('Provinces loaded from userinfo:', userInfoData.provinces);
+    }
+    if (userInfoData.cities) {
+      setCities(userInfoData.cities);
+      console.log('Cities loaded from userinfo:', userInfoData.cities);
+    }
+    setLocationDataLoading(false);
+    setLoading(false); // Also set main loading to false
+  };
 
   useEffect(() => {
-    // Check if user is authenticated
-    const cookies = document.cookie.split('; ').reduce((acc, cookie) => {
-      const [key, value] = cookie.split('=');
-      acc[key] = value;
-      return acc;
-    }, {} as Record<string, string>);
-
-    if (!cookies.JSESSIONID || cookies.user_status !== 'verified') {
-      router.push('/sign-in?redirect=/profile');
+    if (hasInitialized.current) {
+      console.log('Profile page useEffect - already initialized, skipping');
       return;
     }
-
-    // Mock user data - in real app, fetch from API
-    const mockUserData: UserData = {
-      id: cookies.JSESSIONID,
-      name: 'John Doe',
-      email: 'john.doe@example.com',
-      phone: '+1 (555) 123-4567',
-      address: '123 Fashion Street, Style City, SC 12345',
-      joinDate: 'January 2024',
-      avatar: undefined
+    
+    hasInitialized.current = true;
+    console.log('Profile page useEffect triggered');
+    
+    // Add a timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      console.log('Loading timeout reached, setting loading to false');
+      setLoading(false);
+    }, 10000); // 10 seconds timeout
+    
+    // Use the same API route as navbar for consistency
+    const checkSession = async () => {
+      try {
+        const response = await fetch('/api/check-session');
+        const data = await response.json();
+        console.log('Profile session check result:', data);
+        
+        if (!data.hasUser) {
+          console.log('No valid session found, redirecting to sign-in');
+          setLoading(false);
+          router.push('/sign-in?redirect=/profile');
+          return;
+        }
+        
+        console.log('Valid session found, proceeding to load profile data');
+        
+        // Make request to UserInfo endpoint via our API route
+        try {
+          // Try GET first, if it fails due to CORS, try POST
+          let userInfoResponse = await fetch('/api/userinfo', {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          // If GET fails with CORS error, try POST
+          if (userInfoResponse.status === 405 || userInfoResponse.status === 0) {
+            console.log('GET failed, trying POST method');
+            userInfoResponse = await fetch('/api/userinfo', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            });
+          }
+          
+          if (userInfoResponse.ok) {
+            const userInfoData = await userInfoResponse.json();
+            console.log('UserInfo API response:', userInfoData);
+            
+            // Check if user is authenticated
+            if (userInfoData.authenticated === true) {
+              // Use the data from the API
+              const userDataFromAPI: UserData = {
+                id: userInfoData.id || data.sessionId || 'unknown',
+                name: userInfoData.name || `${userInfoData.firstName || ''} ${userInfoData.lastName || ''}`.trim() || 'User',
+                email: userInfoData.email || 'user@example.com',
+                firstName: userInfoData.firstName,
+                lastName: userInfoData.lastName,
+                phone: userInfoData.phone || '+1 (555) 123-4567',
+                address: userInfoData.address || '123 Fashion Street, Style City, SC 12345',
+                joinDate: userInfoData.joinDate || 'January 2024',
+                avatar: userInfoData.avatar || undefined,
+                verificationRequired: userInfoData.verificationRequired,
+                status: userInfoData.status,
+                authenticated: userInfoData.authenticated,
+                provinces: userInfoData.provinces,
+                cities: userInfoData.cities
+              };
+              
+              setUserData(userDataFromAPI);
+              setEditForm(userDataFromAPI);
+              
+              // Set location data from userinfo response
+              setLocationDataFromUserInfo(userInfoData);
+              console.log('Setting loading to false - success path');
+              setLoading(false);
+            } else {
+              // User not authenticated, redirect to sign-in
+              console.log('User not authenticated, redirecting to sign-in');
+              setLoading(false);
+              router.push('/sign-in?redirect=/profile');
+              return;
+            }
+          } else {
+            console.error('UserInfo API request failed:', userInfoResponse.status, userInfoResponse.statusText);
+            // Fall back to mock data if API fails
+            const mockUserData: UserData = {
+              id: data.sessionId || 'unknown',
+              name: 'John Doe',
+              email: 'john.doe@example.com',
+              phone: '+1 (555) 123-4567',
+              address: '123 Fashion Street, Style City, SC 12345',
+              joinDate: 'January 2024',
+              avatar: undefined
+            };
+            
+            setUserData(mockUserData);
+            setEditForm(mockUserData);
+            setLoading(false);
+          }
+        } catch (userInfoError) {
+          console.error('Error fetching user info from API:', userInfoError);
+          // Fall back to mock data if API call fails
+          const mockUserData: UserData = {
+            id: data.sessionId || 'unknown',
+            name: 'John Doe',
+            email: 'john.doe@example.com',
+            phone: '+1 (555) 123-4567',
+            address: '123 Fashion Street, Style City, SC 12345',
+            joinDate: 'January 2024',
+            avatar: undefined
+          };
+          
+          setUserData(mockUserData);
+          setEditForm(mockUserData);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error checking session:', error);
+        setLoading(false);
+        router.push('/sign-in?redirect=/profile');
+      }
     };
 
-    setUserData(mockUserData);
-    setEditForm(mockUserData);
-    setLoading(false);
+    checkSession();
+    
+    // Cleanup timeout on unmount
+    return () => {
+      clearTimeout(timeoutId);
+    };
   }, [router]);
 
   const handleEdit = () => {
@@ -87,24 +231,54 @@ export default function ProfilePage() {
     setIsEditing(false);
   };
 
-  const handleLogout = () => {
-    // Clear cookies and redirect to home
-    document.cookie = 'user_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    document.cookie = 'JSESSIONID=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    document.cookie = 'user_status=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    router.push('/');
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/signout', { method: 'POST' });
+      const data = await response.json();
+      console.log('Profile sign out result:', data);
+      if (data.success) {
+        console.log('Successfully signed out from profile page');
+        router.push('/');
+      }
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
+  console.log('Profile render - loading:', loading, 'userData:', !!userData);
+  
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f6f6f6] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#ffcb74] border-t-transparent"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#ffcb74] border-t-transparent mx-auto"></div>
+          <div className="mt-4 text-[#666666]">Loading profile...</div>
+          <Button 
+            onClick={() => {
+              console.log('Manual loading stop clicked');
+              setLoading(false);
+            }} 
+            className="mt-4 bg-[#ffcb74] text-[#111111]"
+          >
+            Stop Loading
+          </Button>
+        </div>
       </div>
     );
   }
 
   if (!userData) {
-    return null;
+    console.log('No user data, showing fallback');
+    return (
+      <div className="min-h-screen bg-[#f6f6f6] flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-[#666666] mb-4">Unable to load profile data</div>
+          <Button onClick={() => window.location.reload()} className="bg-[#ffcb74] text-[#111111]">
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -155,7 +329,7 @@ export default function ProfilePage() {
                   </Badge>
                 </div>
                 <p className="text-[#666666] mb-1">{userData.email}</p>
-                <p className="text-[#666666] text-sm">Member since {userData.joinDate}</p>
+                
               </div>
             </div>
           </CardContent>
@@ -285,26 +459,167 @@ export default function ProfilePage() {
                         )}
                       </div>
 
+                     
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div className="space-y-3">
-                        <Label className="text-[#111111] text-sm font-medium">
-                          Member Since
+                        <Label htmlFor="province" className="text-[#111111] text-sm font-medium">
+                          Province
                         </Label>
-                        <div className="flex items-center gap-2 py-2">
-                          <Calendar className="w-4 h-4 text-[#ffcb74]" />
-                          <span className="text-[#666666]">{userData.joinDate}</span>
-                        </div>
+                        {isEditing ? (
+                          <Popover open={openProvince} onOpenChange={setOpenProvince}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={openProvince}
+                                disabled={locationDataLoading}
+                                className="w-full justify-between bg-white border-[#e5e5e5] text-[#111111] focus:border-[#ffcb74] focus:ring-1 focus:ring-[#ffcb74] disabled:opacity-50"
+                              >
+                                {locationDataLoading 
+                                  ? "Loading provinces..." 
+                                  : editForm.province
+                                    ? provinces.find((province) => province.name === editForm.province)?.name
+                                    : "Select province..."}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0">
+                              <Command>
+                                <CommandInput placeholder="Search province..." />
+                                <CommandList>
+                                  <CommandEmpty>
+                                    {locationDataLoading ? "Loading provinces..." : "No province found."}
+                                  </CommandEmpty>
+                                  {!locationDataLoading && (
+                                    <CommandGroup>
+                                      {provinces.map((province) => (
+                                        <CommandItem
+                                          key={province.id}
+                                          value={province.name}
+                                          onSelect={(currentValue) => {
+                                            setEditForm(prev => ({ ...prev, province: currentValue }));
+                                            setOpenProvince(false);
+                                          }}
+                                        >
+                                          <Check
+                                            className={cn(
+                                              "mr-2 h-4 w-4",
+                                              editForm.province === province.name ? "opacity-100" : "opacity-0"
+                                            )}
+                                          />
+                                          {province.name}
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  )}
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        ) : (
+                          <div className="flex items-center gap-2 py-2">
+                            <MapPin className="w-4 h-4 text-[#ffcb74]" />
+                            <span className="text-[#666666]">{userData.province || 'Not provided'}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-3">
+                        <Label htmlFor="city" className="text-[#111111] text-sm font-medium">
+                          City
+                        </Label>
+                        {isEditing ? (
+                          <Popover open={openCity} onOpenChange={setOpenCity}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={openCity}
+                                disabled={locationDataLoading}
+                                className="w-full justify-between bg-white border-[#e5e5e5] text-[#111111] focus:border-[#ffcb74] focus:ring-1 focus:ring-[#ffcb74] disabled:opacity-50"
+                              >
+                                {locationDataLoading 
+                                  ? "Loading cities..." 
+                                  : editForm.city
+                                    ? cities.find((city) => city.name === editForm.city)?.name
+                                    : "Select city..."}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0">
+                              <Command>
+                                <CommandInput placeholder="Search city..." />
+                                <CommandList>
+                                  <CommandEmpty>
+                                    {locationDataLoading ? "Loading cities..." : "No city found."}
+                                  </CommandEmpty>
+                                  {!locationDataLoading && (
+                                    <CommandGroup>
+                                      {cities.map((city) => (
+                                        <CommandItem
+                                          key={city.id}
+                                          value={city.name}
+                                          onSelect={(currentValue) => {
+                                            setEditForm(prev => ({ ...prev, city: currentValue }));
+                                            setOpenCity(false);
+                                          }}
+                                        >
+                                          <Check
+                                            className={cn(
+                                              "mr-2 h-4 w-4",
+                                              editForm.city === city.name ? "opacity-100" : "opacity-0"
+                                            )}
+                                          />
+                                          {city.name}
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  )}
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        ) : (
+                          <div className="flex items-center gap-2 py-2">
+                            <MapPin className="w-4 h-4 text-[#ffcb74]" />
+                            <span className="text-[#666666]">{userData.city || 'Not provided'}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-3">
+                        <Label htmlFor="postalCode" className="text-[#111111] text-sm font-medium">
+                          Postal Code
+                        </Label>
+                        {isEditing ? (
+                          <Input
+                            id="postalCode"
+                            value={editForm.postalCode || ''}
+                            onChange={(e) => setEditForm(prev => ({ ...prev, postalCode: e.target.value }))}
+                            placeholder="A1A 1A1"
+                            className="bg-white border-[#e5e5e5] text-[#111111] focus:border-[#ffcb74] focus:ring-1 focus:ring-[#ffcb74]"
+                          />
+                        ) : (
+                          <div className="flex items-center gap-2 py-2">
+                            <MapPin className="w-4 h-4 text-[#ffcb74]" />
+                            <span className="text-[#666666]">{userData.postalCode || 'Not provided'}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
                     <div className="space-y-3">
                       <Label htmlFor="address" className="text-[#111111] text-sm font-medium">
-                        Address
+                        Street Address
                       </Label>
                       {isEditing ? (
                         <Input
                           id="address"
                           value={editForm.address || ''}
                           onChange={(e) => setEditForm(prev => ({ ...prev, address: e.target.value }))}
+                          placeholder="123 Main Street"
                           className="bg-white border-[#e5e5e5] text-[#111111] focus:border-[#ffcb74] focus:ring-1 focus:ring-[#ffcb74]"
                         />
                       ) : (

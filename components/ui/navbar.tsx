@@ -68,11 +68,25 @@ const Navbar = () => {
     const totalCount = cart.reduce((sum, item) => sum + item.quantity, 0);
     const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
+    // Check for session using API route
     useEffect(() => {
-        // Check for JSESSIONID cookie client-side
-        if (typeof document !== 'undefined') {
-            setHasUser(document.cookie.split('; ').some(c => c.startsWith('JSESSIONID=')));
-        }
+        const checkSession = async () => {
+            try {
+                const response = await fetch('/api/check-session');
+                const data = await response.json();
+                console.log('Session check result:', data);
+                setHasUser(data.hasUser);
+            } catch (error) {
+                console.error('Error checking session:', error);
+                setHasUser(false);
+            }
+        };
+
+        checkSession();
+        
+        // Check periodically for session changes
+        const interval = setInterval(checkSession, 5000);
+        return () => clearInterval(interval);
     }, []);
 
     return (
@@ -151,6 +165,8 @@ const Navbar = () => {
 
                     {/* Sign In/Sign Up Buttons - Desktop */}
                     <div className="hidden md:flex items-center">
+                        {/* Debug info - remove this later */}
+                      
                         {hasUser ? (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -173,7 +189,22 @@ const Navbar = () => {
                                             <span>Cart</span>
                                         </Link>
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem className="text-[#ff4d4f] hover:bg-[#111111] hover:text-[#ff4d4f] transition-all duration-200 flex items-center gap-2 cursor-pointer p-3 rounded-md">
+                                    <DropdownMenuItem 
+                                        className="text-[#ff4d4f] hover:bg-[#111111] hover:text-[#ff4d4f] transition-all duration-200 flex items-center gap-2 cursor-pointer p-3 rounded-md"
+                                        onClick={async () => {
+                                            try {
+                                                const response = await fetch('/api/signout', { method: 'POST' });
+                                                const data = await response.json();
+                                                console.log('Sign out result:', data);
+                                                if (data.success) {
+                                                    // Refresh the page to update navbar state
+                                                    window.location.reload();
+                                                }
+                                            } catch (error) {
+                                                console.error('Error signing out:', error);
+                                            }
+                                        }}
+                                    >
                                         <LogOut className="w-4 h-4" />
                                         <span>Sign Out</span>
                                     </DropdownMenuItem>
@@ -193,62 +224,64 @@ const Navbar = () => {
 
                     {/* Cart and UserButton for mobile */}
                     <div className="hidden md:flex items-center ml-4">
-                        <Sheet open={cartSheetOpen} onOpenChange={setCartSheetOpen}>
-                            <SheetTrigger asChild>
-                                <button className="relative p-2 rounded-md hover:bg-[#2f2f2f] transition-colors duration-200" aria-label="Open cart" title="Open cart">
-                                    <ShoppingCart className="w-6 h-6" />
-                                    <span className="absolute -top-2 -right-2 bg-primary text-white text-xs rounded-full px-1.5 py-0.5">{totalCount}</span>
-                                </button>
-                            </SheetTrigger>
-                            <SheetContent side="right" className="p-0 bg-[#111111] text-[#f6f6f6] w-full max-w-md flex flex-col">
-                                <div className="flex-1 overflow-y-auto p-6">
-                                    <h2 className="text-xl font-semibold mb-6">Your Cart</h2>
-                                    {cart.map((item, index, arr) => (
-                                        <div key={item.id}>
-                                            <div className="flex gap-4 py-4">
-                                                <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
-                                                    <Image
-                                                        src={item.image}
-                                                        alt={item.name}
-                                                        width={64}
-                                                        height={64}
-                                                        className="object-contain w-14 h-14 bg-white rounded-md"
-                                                    />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <h3 className="font-medium text-base truncate">{item.name}</h3>
-                                                    <div className="text-xs text-muted-foreground mt-1 space-y-1">
-                                                        {item.details.split('\n').map((line, i) => (
-                                                            <div key={i}>{line}</div>
-                                                        ))}
+                        {hasUser && (
+                            <Sheet open={cartSheetOpen} onOpenChange={setCartSheetOpen}>
+                                <SheetTrigger asChild>
+                                    <button className="relative p-2 rounded-md hover:bg-[#2f2f2f] transition-colors duration-200" aria-label="Open cart" title="Open cart">
+                                        <ShoppingCart className="w-6 h-6" />
+                                        <span className="absolute -top-2 -right-2 bg-primary text-white text-xs rounded-full px-1.5 py-0.5">{totalCount}</span>
+                                    </button>
+                                </SheetTrigger>
+                                <SheetContent side="right" className="p-0 bg-[#111111] text-[#f6f6f6] w-full max-w-md flex flex-col">
+                                    <div className="flex-1 overflow-y-auto p-6">
+                                        <h2 className="text-xl font-semibold mb-6">Your Cart</h2>
+                                        {cart.map((item, index, arr) => (
+                                            <div key={item.id}>
+                                                <div className="flex gap-4 py-4">
+                                                    <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                                                        <Image
+                                                            src={item.image}
+                                                            alt={item.name}
+                                                            width={64}
+                                                            height={64}
+                                                            className="object-contain w-14 h-14 bg-white rounded-md"
+                                                        />
                                                     </div>
-                                                    <div className="flex items-center gap-2 mt-2">
-                                                        <Button variant="outline" size="icon" className="w-6 h-6 rounded-full border-muted-foreground/20 hover:border-muted-foreground/40 p-0" onClick={() => updateQuantity(item.id, -1)}><Minus className="w-3 h-3 text-black" /></Button>
-                                                        <span className="w-6 text-center font-medium">{item.quantity}</span>
-                                                        <Button variant="outline" size="icon" className="w-6 h-6 rounded-full border-muted-foreground/20 hover:border-muted-foreground/40 p-0" onClick={() => updateQuantity(item.id, 1)}><Plus className="w-3 h-3 text-black" /></Button>
+                                                    <div className="flex-1 min-w-0">
+                                                        <h3 className="font-medium text-base truncate">{item.name}</h3>
+                                                        <div className="text-xs text-muted-foreground mt-1 space-y-1">
+                                                            {item.details.split('\n').map((line, i) => (
+                                                                <div key={i}>{line}</div>
+                                                            ))}
+                                                        </div>
+                                                        <div className="flex items-center gap-2 mt-2">
+                                                            <Button variant="outline" size="icon" className="w-6 h-6 rounded-full border-muted-foreground/20 hover:border-muted-foreground/40 p-0" onClick={() => updateQuantity(item.id, -1)}><Minus className="w-3 h-3 text-black" /></Button>
+                                                            <span className="w-6 text-center font-medium">{item.quantity}</span>
+                                                            <Button variant="outline" size="icon" className="w-6 h-6 rounded-full border-muted-foreground/20 hover:border-muted-foreground/40 p-0" onClick={() => updateQuantity(item.id, 1)}><Plus className="w-3 h-3 text-black" /></Button>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex flex-col items-end justify-between">
+                                                        <button className="text-muted-foreground hover:text-destructive transition-colors p-1" aria-label={`Remove ${item.name} from cart`} title={`Remove ${item.name} from cart`}><Trash2 className="w-4 h-4" /></button>
+                                                        <div className="font-medium text-base mt-2">${(item.price * item.quantity).toFixed(2)}</div>
                                                     </div>
                                                 </div>
-                                                <div className="flex flex-col items-end justify-between">
-                                                    <button className="text-muted-foreground hover:text-destructive transition-colors p-1" aria-label={`Remove ${item.name} from cart`} title={`Remove ${item.name} from cart`}><Trash2 className="w-4 h-4" /></button>
-                                                    <div className="font-medium text-base mt-2">${(item.price * item.quantity).toFixed(2)}</div>
-                                                </div>
+                                                {index < arr.length - 1 && <Separator className="opacity-30" />}
                                             </div>
-                                            {index < arr.length - 1 && <Separator className="opacity-30" />}
+                                        ))}
+                                        {/* Subtotal */}
+                                        <div className="flex justify-between items-center mt-6 text-base font-medium">
+                                            <span>Subtotal</span>
+                                            <span>${subtotal.toFixed(2)}</span>
                                         </div>
-                                    ))}
-                                    {/* Subtotal */}
-                                    <div className="flex justify-between items-center mt-6 text-base font-medium">
-                                        <span>Subtotal</span>
-                                        <span>${subtotal.toFixed(2)}</span>
                                     </div>
-                                </div>
-                                <div className="p-4 border-t border-border">
-                                    <Link href="/cart" className="block w-full" onClick={() => setCartSheetOpen(false)}>
-                                        <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 py-3 font-medium rounded-lg">View Cart</Button>
-                                    </Link>
-                                </div>
-                            </SheetContent>
-                        </Sheet>
+                                    <div className="p-4 border-t border-border">
+                                        <Link href="/cart" className="block w-full" onClick={() => setCartSheetOpen(false)}>
+                                            <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 py-3 font-medium rounded-lg">View Cart</Button>
+                                        </Link>
+                                    </div>
+                                </SheetContent>
+                            </Sheet>
+                        )}
                     </div>
 
                     {/* Mobile menu button and Sheet */}
@@ -322,11 +355,18 @@ const Navbar = () => {
                                                     Profile
                                                 </Link>
                                                 <button className="w-full px-4 py-2 text-base font-medium border border-[#ff4d4f] text-[#ff4d4f] rounded-lg hover:bg-[#ff4d4f] hover:text-[#f6f6f6] transition-all duration-200 text-center flex items-center justify-center gap-2"
-                                                    onClick={() => {
-                                                        document.cookie = 'JSESSIONID=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-                                                        document.cookie = 'user_status=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-                                                        setOpen(false);
-                                                        window.location.href = '/';
+                                                    onClick={async () => {
+                                                        try {
+                                                            const response = await fetch('/api/signout', { method: 'POST' });
+                                                            const data = await response.json();
+                                                            console.log('Mobile sign out result:', data);
+                                                            if (data.success) {
+                                                                setOpen(false);
+                                                                window.location.reload();
+                                                            }
+                                                        } catch (error) {
+                                                            console.error('Error signing out:', error);
+                                                        }
                                                     }}
                                                 >
                                                     <LogOut className="w-4 h-4" />
@@ -348,6 +388,7 @@ const Navbar = () => {
                                             </div>
                                         )}
                                         {/* Cart and UserButton for mobile */}
+                                        {hasUser && (
                                         <div className="flex items-center justify-center gap-4 mt-4 md:hidden">
                                           <Link href="/cart" className="relative" aria-label="Cart" onClick={() => setOpen(false)}>
                                             <svg className="w-6 h-6 inline-block" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -358,6 +399,7 @@ const Navbar = () => {
                                             <span className="absolute -top-2 -right-2 bg-primary text-white text-xs rounded-full px-1.5 py-0.5">2</span>
                                           </Link>
                                         </div>
+                                        )}
                                     </div>
                                 </div>
                             </SheetContent>
