@@ -15,6 +15,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import AddressForm, { AddressData } from "@/components/address-form";
 import { 
   User, 
   Mail, 
@@ -54,14 +55,25 @@ interface UserData {
 export default function ProfilePage() {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [addressLoading, setAddressLoading] = useState(false);
   const [editForm, setEditForm] = useState<Partial<UserData>>({});
+  const [addressForm, setAddressForm] = useState<AddressData>({
+    line1: '',
+    line2: '',
+    postal_code: '',
+    phone: '',
+    city_name: '',
+    province_name: '',
+  });
   const [provinces, setProvinces] = useState<Array<{ id: string; name: string }>>([]);
   const [cities, setCities] = useState<Array<{ id: string; name: string; province_id?: string }>>([]);
   const [openProvince, setOpenProvince] = useState(false);
   const [openCity, setOpenCity] = useState(false);
   const [locationDataLoading, setLocationDataLoading] = useState(true);
+  const [addressData, setAddressData] = useState<AddressData | null>(null);
   const hasInitialized = useRef(false);
 
   // Function to set provinces and cities from userinfo response
@@ -76,6 +88,50 @@ export default function ProfilePage() {
     }
     setLocationDataLoading(false);
     setLoading(false); // Also set main loading to false
+  };
+
+  // Function to fetch user address data
+  const fetchUserAddress = async () => {
+    try {
+      console.log('Fetching user address data...');
+      const response = await fetch('/api/user-address');
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Address data response:', data);
+        
+        if (data.status === 'success' && data.address) {
+          setAddressData(data.address);
+          
+          // Update userData with address information
+          setUserData(prev => prev ? {
+            ...prev,
+            address: data.address.line1,
+            phone: data.address.phone,
+            province: data.address.province_name,
+            city: data.address.city_name,
+            postalCode: data.address.postal_code,
+          } : null);
+          
+          console.log('Address data loaded successfully:', data.address);
+        } else {
+          console.log('No address data available or user not authenticated');
+          // Set empty address data
+          setAddressData({
+            line1: '',
+            line2: '',
+            postal_code: '',
+            phone: '',
+            city_name: '',
+            province_name: '',
+          });
+        }
+      } else {
+        console.error('Failed to fetch address data:', response.status);
+      }
+    } catch (error) {
+      console.error('Error fetching address data:', error);
+    }
   };
 
   useEffect(() => {
@@ -159,6 +215,10 @@ export default function ProfilePage() {
               
               // Set location data from userinfo response
               setLocationDataFromUserInfo(userInfoData);
+              
+              // Fetch address data after user data is loaded
+              await fetchUserAddress();
+              
               console.log('Setting loading to false - success path');
               setLoading(false);
             } else {
@@ -222,13 +282,78 @@ export default function ProfilePage() {
   };
 
   const handleSave = () => {
-    setUserData(prev => prev ? { ...prev, ...editForm } : null);
+    // Only update the name field since that's the only editable field
+    setUserData(prev => prev ? { 
+      ...prev, 
+      name: editForm.name || prev.name,
+      firstName: editForm.firstName || prev.firstName,
+      lastName: editForm.lastName || prev.lastName
+    } : null);
     setIsEditing(false);
   };
 
   const handleCancel = () => {
     setEditForm(userData || {});
     setIsEditing(false);
+  };
+
+  const handleAddressEdit = () => {
+    // Use fetched address data if available, otherwise use userData
+    if (addressData) {
+      setAddressForm(addressData);
+    } else if (userData) {
+      const currentAddress: AddressData = {
+        line1: userData.address?.split(',')[0] || '',
+        line2: '',
+        postal_code: userData.postalCode || '',
+        phone: userData.phone || '',
+        city_name: userData.city || '',
+        province_name: userData.province || '',
+      };
+      setAddressForm(currentAddress);
+    }
+    setIsEditingAddress(true);
+  };
+
+  const handleAddressSave = async (addressData: AddressData): Promise<void> => {
+    try {
+      const response = await fetch('/api/update-address', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(addressData),
+      });
+
+      const result = await response.json();
+      
+      if (result.status === 'success') {
+        // Update local user data with new address information
+        setUserData(prev => prev ? {
+          ...prev,
+          address: `${addressData.line1}${addressData.line2 ? ', ' + addressData.line2 : ''}`,
+          postalCode: addressData.postal_code,
+          phone: addressData.phone,
+          city: addressData.city_name,
+          province: addressData.province_name,
+        } : null);
+        
+        // Update addressData state
+        setAddressData(addressData);
+        
+        console.log('Address updated successfully:', result);
+      } else {
+        console.error('Failed to update address:', result.message);
+        throw new Error(result.message || 'Failed to update address');
+      }
+    } catch (error) {
+      console.error('Error updating address:', error);
+      throw error;
+    }
+  };
+
+  const handleAddressCancel = () => {
+    setIsEditingAddress(false);
   };
 
   const handleLogout = async () => {
@@ -340,12 +465,18 @@ export default function ProfilePage() {
           {/* Content Area */}
           <div className="lg:col-span-3">
             <Tabs defaultValue="profile" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 bg-white border border-[#e5e5e5] p-1">
+              <TabsList className="grid w-full grid-cols-4 bg-white border border-[#e5e5e5] p-1">
                 <TabsTrigger 
                   value="profile" 
                   className="data-[state=active]:bg-[#ffcb74] data-[state=active]:text-[#111111]"
                 >
                   Personal Info
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="address" 
+                  className="data-[state=active]:bg-[#ffcb74] data-[state=active]:text-[#111111]"
+                >
+                  Address
                 </TabsTrigger>
                 <TabsTrigger 
                   value="orders" 
@@ -424,39 +555,22 @@ export default function ProfilePage() {
                         <Label htmlFor="email" className="text-[#111111] text-sm font-medium">
                           Email Address
                         </Label>
-                        {isEditing ? (
-                          <Input
-                            id="email"
-                            type="email"
-                            value={editForm.email || ''}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
-                            className="bg-white border-[#e5e5e5] text-[#111111] focus:border-[#ffcb74] focus:ring-1 focus:ring-[#ffcb74]"
-                          />
-                        ) : (
-                          <div className="flex items-center gap-2 py-2">
-                            <Mail className="w-4 h-4 text-[#ffcb74]" />
-                            <span className="text-[#666666]">{userData.email}</span>
-                          </div>
-                        )}
+                        <div className="flex items-center gap-2 py-2">
+                          <Mail className="w-4 h-4 text-[#ffcb74]" />
+                          <span className="text-[#666666]">{userData.email}</span>
+                        </div>
                       </div>
 
                       <div className="space-y-3">
                         <Label htmlFor="phone" className="text-[#111111] text-sm font-medium">
                           Phone Number
                         </Label>
-                        {isEditing ? (
-                          <Input
-                            id="phone"
-                            value={editForm.phone || ''}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
-                            className="bg-white border-[#e5e5e5] text-[#111111] focus:border-[#ffcb74] focus:ring-1 focus:ring-[#ffcb74]"
-                          />
-                        ) : (
-                          <div className="flex items-center gap-2 py-2">
-                            <Phone className="w-4 h-4 text-[#ffcb74]" />
-                            <span className="text-[#666666]">{userData.phone || 'Not provided'}</span>
-                          </div>
-                        )}
+                        <div className="flex items-center gap-2 py-2">
+                          <Phone className="w-4 h-4 text-[#ffcb74]" />
+                                                      <span className="text-[#666666]">
+                              {userData.phone && String(userData.phone).trim() !== '' ? String(userData.phone) : 'Not provided'}
+                            </span>
+                        </div>
                       </div>
 
                      
@@ -467,146 +581,36 @@ export default function ProfilePage() {
                         <Label htmlFor="province" className="text-[#111111] text-sm font-medium">
                           Province
                         </Label>
-                        {isEditing ? (
-                          <Popover open={openProvince} onOpenChange={setOpenProvince}>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={openProvince}
-                                disabled={locationDataLoading}
-                                className="w-full justify-between bg-white border-[#e5e5e5] text-[#111111] focus:border-[#ffcb74] focus:ring-1 focus:ring-[#ffcb74] disabled:opacity-50"
-                              >
-                                {locationDataLoading 
-                                  ? "Loading provinces..." 
-                                  : editForm.province
-                                    ? provinces.find((province) => province.name === editForm.province)?.name
-                                    : "Select province..."}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full p-0">
-                              <Command>
-                                <CommandInput placeholder="Search province..." />
-                                <CommandList>
-                                  <CommandEmpty>
-                                    {locationDataLoading ? "Loading provinces..." : "No province found."}
-                                  </CommandEmpty>
-                                  {!locationDataLoading && (
-                                    <CommandGroup>
-                                      {provinces.map((province) => (
-                                        <CommandItem
-                                          key={province.id}
-                                          value={province.name}
-                                          onSelect={(currentValue) => {
-                                            setEditForm(prev => ({ ...prev, province: currentValue }));
-                                            setOpenProvince(false);
-                                          }}
-                                        >
-                                          <Check
-                                            className={cn(
-                                              "mr-2 h-4 w-4",
-                                              editForm.province === province.name ? "opacity-100" : "opacity-0"
-                                            )}
-                                          />
-                                          {province.name}
-                                        </CommandItem>
-                                      ))}
-                                    </CommandGroup>
-                                  )}
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
-                        ) : (
-                          <div className="flex items-center gap-2 py-2">
-                            <MapPin className="w-4 h-4 text-[#ffcb74]" />
-                            <span className="text-[#666666]">{userData.province || 'Not provided'}</span>
-                          </div>
-                        )}
+                        <div className="flex items-center gap-2 py-2">
+                          <MapPin className="w-4 h-4 text-[#ffcb74]" />
+                                                      <span className="text-[#666666]">
+                              {userData.province && String(userData.province).trim() !== '' ? String(userData.province) : 'Not provided'}
+                            </span>
+                        </div>
                       </div>
 
                       <div className="space-y-3">
                         <Label htmlFor="city" className="text-[#111111] text-sm font-medium">
                           City
                         </Label>
-                        {isEditing ? (
-                          <Popover open={openCity} onOpenChange={setOpenCity}>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={openCity}
-                                disabled={locationDataLoading}
-                                className="w-full justify-between bg-white border-[#e5e5e5] text-[#111111] focus:border-[#ffcb74] focus:ring-1 focus:ring-[#ffcb74] disabled:opacity-50"
-                              >
-                                {locationDataLoading 
-                                  ? "Loading cities..." 
-                                  : editForm.city
-                                    ? cities.find((city) => city.name === editForm.city)?.name
-                                    : "Select city..."}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full p-0">
-                              <Command>
-                                <CommandInput placeholder="Search city..." />
-                                <CommandList>
-                                  <CommandEmpty>
-                                    {locationDataLoading ? "Loading cities..." : "No city found."}
-                                  </CommandEmpty>
-                                  {!locationDataLoading && (
-                                    <CommandGroup>
-                                      {cities.map((city) => (
-                                        <CommandItem
-                                          key={city.id}
-                                          value={city.name}
-                                          onSelect={(currentValue) => {
-                                            setEditForm(prev => ({ ...prev, city: currentValue }));
-                                            setOpenCity(false);
-                                          }}
-                                        >
-                                          <Check
-                                            className={cn(
-                                              "mr-2 h-4 w-4",
-                                              editForm.city === city.name ? "opacity-100" : "opacity-0"
-                                            )}
-                                          />
-                                          {city.name}
-                                        </CommandItem>
-                                      ))}
-                                    </CommandGroup>
-                                  )}
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
-                        ) : (
-                          <div className="flex items-center gap-2 py-2">
-                            <MapPin className="w-4 h-4 text-[#ffcb74]" />
-                            <span className="text-[#666666]">{userData.city || 'Not provided'}</span>
-                          </div>
-                        )}
+                        <div className="flex items-center gap-2 py-2">
+                          <MapPin className="w-4 h-4 text-[#ffcb74]" />
+                                                      <span className="text-[#666666]">
+                              {userData.city && String(userData.city).trim() !== '' ? String(userData.city) : 'Not provided'}
+                            </span>
+                        </div>
                       </div>
 
                       <div className="space-y-3">
                         <Label htmlFor="postalCode" className="text-[#111111] text-sm font-medium">
                           Postal Code
                         </Label>
-                        {isEditing ? (
-                          <Input
-                            id="postalCode"
-                            value={editForm.postalCode || ''}
-                            onChange={(e) => setEditForm(prev => ({ ...prev, postalCode: e.target.value }))}
-                            placeholder="A1A 1A1"
-                            className="bg-white border-[#e5e5e5] text-[#111111] focus:border-[#ffcb74] focus:ring-1 focus:ring-[#ffcb74]"
-                          />
-                        ) : (
-                          <div className="flex items-center gap-2 py-2">
-                            <MapPin className="w-4 h-4 text-[#ffcb74]" />
-                            <span className="text-[#666666]">{userData.postalCode || 'Not provided'}</span>
-                          </div>
-                        )}
+                        <div className="flex items-center gap-2 py-2">
+                          <MapPin className="w-4 h-4 text-[#ffcb74]" />
+                                                      <span className="text-[#666666]">
+                              {userData.postalCode && String(userData.postalCode).trim() !== '' ? String(userData.postalCode) : 'Not provided'}
+                            </span>
+                        </div>
                       </div>
                     </div>
 
@@ -614,23 +618,107 @@ export default function ProfilePage() {
                       <Label htmlFor="address" className="text-[#111111] text-sm font-medium">
                         Street Address
                       </Label>
-                      {isEditing ? (
-                        <Input
-                          id="address"
-                          value={editForm.address || ''}
-                          onChange={(e) => setEditForm(prev => ({ ...prev, address: e.target.value }))}
-                          placeholder="123 Main Street"
-                          className="bg-white border-[#e5e5e5] text-[#111111] focus:border-[#ffcb74] focus:ring-1 focus:ring-[#ffcb74]"
-                        />
-                      ) : (
-                        <div className="flex items-center gap-2 py-2">
-                          <MapPin className="w-4 h-4 text-[#ffcb74]" />
-                          <span className="text-[#666666]">{userData.address || 'Not provided'}</span>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2 py-2">
+                        <MapPin className="w-4 h-4 text-[#ffcb74]" />
+                                                    <span className="text-[#666666]">
+                              {userData.address && String(userData.address).trim() !== '' ? String(userData.address) : 'Not provided'}
+                            </span>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
+              </TabsContent>
+
+              <TabsContent value="address" className="mt-6">
+                {isEditingAddress ? (
+                  <AddressForm
+                    onSave={handleAddressSave}
+                    onCancel={handleAddressCancel}
+                    initialData={addressForm}
+                    provinces={provinces}
+                    cities={cities}
+                  />
+                ) : (
+                  <Card className="bg-white border-[#e5e5e5] shadow-sm">
+                    <CardHeader className="flex flex-row items-center justify-between pb-4">
+                      <CardTitle className="text-[#111111] text-lg font-medium">
+                        Address Information
+                      </CardTitle>
+                      <Button 
+                        onClick={handleAddressEdit}
+                        variant="outline" 
+                        size="sm"
+                        className="border-[#ffcb74] text-[#ffcb74] hover:bg-[#ffcb74] hover:text-[#111111]"
+                      >
+                        <Edit3 className="w-4 h-4 mr-2" />
+                        Edit Address
+                      </Button>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-3">
+                          <Label className="text-[#111111] text-sm font-medium">
+                            Street Address
+                          </Label>
+                          <div className="flex items-center gap-2 py-2">
+                            <MapPin className="w-4 h-4 text-[#ffcb74]" />
+                            <span className="text-[#666666]">
+                              {userData.address && String(userData.address).trim() !== '' ? String(userData.address) : 'Not provided'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <Label className="text-[#111111] text-sm font-medium">
+                            Phone Number
+                          </Label>
+                          <div className="flex items-center gap-2 py-2">
+                            <Phone className="w-4 h-4 text-[#ffcb74]" />
+                            <span className="text-[#666666]">
+                              {userData.phone && String(userData.phone).trim() !== '' ? String(userData.phone) : 'Not provided'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <Label className="text-[#111111] text-sm font-medium">
+                            Province
+                          </Label>
+                          <div className="flex items-center gap-2 py-2">
+                            <MapPin className="w-4 h-4 text-[#ffcb74]" />
+                            <span className="text-[#666666]">
+                              {userData.province && String(userData.province).trim() !== '' ? String(userData.province) : 'Not provided'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <Label className="text-[#111111] text-sm font-medium">
+                            City
+                          </Label>
+                          <div className="flex items-center gap-2 py-2">
+                            <MapPin className="w-4 h-4 text-[#ffcb74]" />
+                            <span className="text-[#666666]">
+                              {userData.city && String(userData.city).trim() !== '' ? String(userData.city) : 'Not provided'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <Label className="text-[#111111] text-sm font-medium">
+                            Postal Code
+                          </Label>
+                          <div className="flex items-center gap-2 py-2">
+                            <MapPin className="w-4 h-4 text-[#ffcb74]" />
+                            <span className="text-[#666666]">
+                              {userData.postalCode && String(userData.postalCode).trim() !== '' ? String(userData.postalCode) : 'Not provided'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </TabsContent>
 
               <TabsContent value="orders" className="mt-6">
