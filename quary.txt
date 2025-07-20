@@ -26,3 +26,29 @@ INSERT INTO city (id, name) VALUES
 (13, 'Polonnaruwa'),
 (14, 'Nuwara Eliya'),
 (15, 'Hambantota');
+
+INSERT INTO size (name) VALUES 
+('XS'),
+('S'),
+('M'),
+('L'),
+('XL'),
+('XXL'),
+('3XL'),
+('4XL'),
+('5XL'),
+('One Size');
+
+INSERT INTO category (name) VALUES 
+('T-Shirts'),
+('Shirts'),
+('Jeans'),
+('Shorts'),
+('Hoodies'),
+('Jackets'),
+('Dresses'),
+('Skirts'),
+('Activewear'),
+('Accessories');
+
+

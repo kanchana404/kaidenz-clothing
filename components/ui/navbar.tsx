@@ -17,17 +17,8 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
 const Navbar = () => {
-    const categories = [
-        'Men\'s Clothing',
-        'Women\'s Clothing',
-        'Accessories',
-        'Footwear',
-        'Sportswear',
-        'Formal Wear',
-        'Casual Wear',
-        'Outerwear',
-        'Swimwear'
-    ]
+    const [categories, setCategories] = useState<Array<{id: number, name: string}>>([]);
+    const [loading, setLoading] = useState(true);
 
     const navItems = [
         { name: 'Home', href: '/' },
@@ -67,6 +58,25 @@ const Navbar = () => {
     };
     const totalCount = cart.reduce((sum, item) => sum + item.quantity, 0);
     const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+    // Fetch categories from API
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const response = await fetch('http://localhost:8080/kaidenz/GetCategory');
+                const data = await response.json();
+                console.log('Categories fetched:', data);
+                setCategories(data);
+            } catch (error) {
+                console.error('Error fetching categories:', error);
+                setCategories([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchCategories();
+    }, []);
 
     // Check for session using API route
     useEffect(() => {
@@ -120,36 +130,43 @@ const Navbar = () => {
                                             </button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent className="w-96 bg-[#2f2f2f] border border-[#ffcb74] p-6">
-                                            <div className="grid grid-cols-3 gap-3">
-                                                {categories.map((category) => {
-                                                    // Slugify category name for URL
-                                                    const slug = category.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-                                                    return (
-                                                        <DropdownMenuItem
-                                                            key={category}
-                                                            className="text-[#f6f6f6] hover:bg-[#111111] hover:text-[#ffcb74] transition-all duration-200 flex items-center justify-between group cursor-pointer p-4 rounded-md"
-                                                        >
-                                                            <Link href={`/categories/${slug}`} className="flex items-center w-full h-full">
-                                                                <span className="text-sm font-medium flex-1">{category}</span>
-                                                                {/* Arrow animation */}
-                                                                <svg
-                                                                    className="w-3 h-3 transform transition-transform duration-200 group-hover:translate-x-1"
-                                                                    fill="none"
-                                                                    stroke="currentColor"
-                                                                    viewBox="0 0 24 24"
-                                                                >
-                                                                    <path
-                                                                        strokeLinecap="round"
-                                                                        strokeLinejoin="round"
-                                                                        strokeWidth={2}
-                                                                        d="M9 5l7 7-7 7"
-                                                                    />
-                                                                </svg>
-                                                            </Link>
-                                                        </DropdownMenuItem>
-                                                    );
-                                                })}
-                                            </div>
+                                            {loading ? (
+                                                <div className="text-center py-4">
+                                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#ffcb74] mx-auto"></div>
+                                                    <p className="text-[#f6f6f6] mt-2">Loading categories...</p>
+                                                </div>
+                                            ) : (
+                                                <div className="grid grid-cols-3 gap-3">
+                                                    {categories.map((category) => {
+                                                        // Slugify category name for URL
+                                                        const slug = category.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                                                        return (
+                                                            <DropdownMenuItem
+                                                                key={category.id}
+                                                                className="text-[#f6f6f6] hover:bg-[#111111] hover:text-[#ffcb74] transition-all duration-200 flex items-center justify-between group cursor-pointer p-4 rounded-md"
+                                                            >
+                                                                <Link href={`/categories/${slug}`} className="flex items-center w-full h-full">
+                                                                    <span className="text-sm font-medium flex-1">{category.name}</span>
+                                                                    {/* Arrow animation */}
+                                                                    <svg
+                                                                        className="w-3 h-3 transform transition-transform duration-200 group-hover:translate-x-1"
+                                                                        fill="none"
+                                                                        stroke="currentColor"
+                                                                        viewBox="0 0 24 24"
+                                                                    >
+                                                                        <path
+                                                                            strokeLinecap="round"
+                                                                            strokeLinejoin="round"
+                                                                            strokeWidth={2}
+                                                                            d="M9 5l7 7-7 7"
+                                                                        />
+                                                                    </svg>
+                                                                </Link>
+                                                            </DropdownMenuItem>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 ) : (
@@ -315,19 +332,25 @@ const Navbar = () => {
                                                         </button>
                                                         {mobileCategoriesOpen && (
                                                             <div className="pl-4 pb-2">
-                                                                {categories.map((category) => {
-                                                                    const slug = category.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-                                                                    return (
-                                                                        <Link
-                                                                            key={category}
-                                                                            href={`/categories/${slug}`}
-                                                                            className="block py-2 px-2 text-base hover:text-[#ffcb74] transition-colors duration-200"
-                                                                            onClick={() => setOpen(false)}
-                                                                        >
-                                                                            {category}
-                                                                        </Link>
-                                                                    );
-                                                                })}
+                                                                {loading ? (
+                                                                    <div className="py-2 px-2 text-base text-[#f6f6f6]">
+                                                                        Loading categories...
+                                                                    </div>
+                                                                ) : (
+                                                                    categories.map((category) => {
+                                                                        const slug = category.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                                                                        return (
+                                                                            <Link
+                                                                                key={category.id}
+                                                                                href={`/categories/${slug}`}
+                                                                                className="block py-2 px-2 text-base hover:text-[#ffcb74] transition-colors duration-200"
+                                                                                onClick={() => setOpen(false)}
+                                                                            >
+                                                                                {category.name}
+                                                                            </Link>
+                                                                        );
+                                                                    })
+                                                                )}
                                                             </div>
                                                         )}
                                                     </div>
