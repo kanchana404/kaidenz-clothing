@@ -10,6 +10,26 @@ import { Sheet, SheetTrigger, SheetContent } from '@/components/ui/sheet'
 import { Filter } from 'lucide-react'
 import Link from 'next/link'
 import Footer from '@/components/ui/footer'
+import ColorDots from '@/components/color-dots'
+
+// CSS for image carousel animations with gaps
+const carouselStyles = `
+  @keyframes fadeInOut {
+    0%, 100% { opacity: 0; }
+    20%, 80% { opacity: 1; }
+  }
+  
+  .image-carousel img {
+    opacity: 0;
+    animation: fadeInOut 4s infinite;
+  }
+  
+  .image-carousel img:nth-child(1) { animation-delay: 0s; }
+  .image-carousel img:nth-child(2) { animation-delay: 2s; }
+  .image-carousel img:nth-child(3) { animation-delay: 4s; }
+  .image-carousel img:nth-child(4) { animation-delay: 6s; }
+  .image-carousel img:nth-child(5) { animation-delay: 8s; }
+`;
 
 // Rename 'page' to 'HeroSection'
 const HeroSection = () => {
@@ -92,258 +112,35 @@ const HeroSection = () => {
   )
 }
 
-const products = [
-  {
-    id: 1,
-    name: 'Classic White T-Shirt',
-    price: 19.99,
-    image: '/p1.png',
-    description: 'Premium cotton, relaxed fit, all-season essential.',
-    size: ['S', 'M', 'L', 'XL'],
-    stock: 'available',
-    color: 'White',
-  },
-  {
-    id: 2,
-    name: 'Denim Jacket',
-    price: 49.99,
-    image: '/p2.png',
-    description: 'Timeless style, durable denim, perfect for layering.',
-    size: ['M', 'L', 'XL', 'XXL'],
-    stock: 'out',
-    color: 'Blue',
-  },
-  {
-    id: 3,
-    name: 'Summer Floral Dress',
-    price: 39.99,
-    image: '/p3.png',
-    description: 'Lightweight, breezy, and vibrant for sunny days.',
-    size: ['S', 'M', 'L'],
-    stock: 'available',
-    color: 'Yellow',
-  },
-  {
-    id: 4,
-    name: 'Comfy Joggers',
-    price: 29.99,
-    image: '/p4.png',
-    description: 'Soft fabric, tapered fit, ideal for lounging or outings.',
-    size: ['M', 'L', 'XL'],
-    stock: 'available',
-    color: 'Gray',
-  },
-  // Repeat and slightly vary for 24 products
-  {
-    id: 5,
-    name: 'Striped Polo Shirt',
-    price: 24.99,
-    image: '/p1.png',
-    description: 'Casual stripes, breathable fabric, summer favorite.',
-    size: ['S', 'M', 'L'],
-    stock: 'available',
-    color: 'Navy',
-  },
-  {
-    id: 6,
-    name: 'Leather Biker Jacket',
-    price: 89.99,
-    image: '/p2.png',
-    description: 'Edgy look, premium leather, classic fit.',
-    size: ['M', 'L', 'XL'],
-    stock: 'out',
-    color: 'Black',
-  },
-  {
-    id: 7,
-    name: 'Boho Maxi Dress',
-    price: 59.99,
-    image: '/p3.png',
-    description: 'Flowy, floral, and perfect for festivals.',
-    size: ['S', 'M', 'L', 'XL'],
-    stock: 'available',
-    color: 'Red',
-  },
-  {
-    id: 8,
-    name: 'Slim Fit Chinos',
-    price: 34.99,
-    image: '/p4.png',
-    description: 'Versatile, modern fit, all-day comfort.',
-    size: ['M', 'L', 'XL', 'XXL'],
-    stock: 'available',
-    color: 'Beige',
-  },
-  {
-    id: 9,
-    name: 'Graphic Tee',
-    price: 21.99,
-    image: '/p1.png',
-    description: 'Trendy prints, soft cotton, everyday wear.',
-    size: ['S', 'M', 'L', 'XL'],
-    stock: 'available',
-    color: 'White',
-  },
-  {
-    id: 10,
-    name: 'Oversized Hoodie',
-    price: 44.99,
-    image: '/p2.png',
-    description: 'Cozy, oversized, and perfect for layering.',
-    size: ['M', 'L', 'XL'],
-    stock: 'out',
-    color: 'Gray',
-  },
-  {
-    id: 11,
-    name: 'Pleated Skirt',
-    price: 32.99,
-    image: '/p3.png',
-    description: 'Elegant pleats, midi length, chic style.',
-    size: ['S', 'M', 'L'],
-    stock: 'available',
-    color: 'Yellow',
-  },
-  {
-    id: 12,
-    name: 'Cargo Pants',
-    price: 36.99,
-    image: '/p4.png',
-    description: 'Utility pockets, relaxed fit, durable.',
-    size: ['M', 'L', 'XL', 'XXL'],
-    stock: 'available',
-    color: 'Blue',
-  },
-  {
-    id: 13,
-    name: 'V-Neck Sweater',
-    price: 27.99,
-    image: '/p1.png',
-    description: 'Soft knit, classic v-neck, layering essential.',
-    size: ['S', 'M', 'L', 'XL'],
-    stock: 'available',
-    color: 'White',
-  },
-  {
-    id: 14,
-    name: 'Bomber Jacket',
-    price: 54.99,
-    image: '/p2.png',
-    description: 'Trendy bomber, ribbed cuffs, lightweight.',
-    size: ['M', 'L', 'XL'],
-    stock: 'out',
-    color: 'Black',
-  },
-  {
-    id: 15,
-    name: 'Wrap Dress',
-    price: 42.99,
-    image: '/p3.png',
-    description: 'Flattering wrap, soft fabric, day-to-night.',
-    size: ['S', 'M', 'L'],
-    stock: 'available',
-    color: 'Red',
-  },
-  {
-    id: 16,
-    name: 'Track Pants',
-    price: 28.99,
-    image: '/p4.png',
-    description: 'Sporty, comfortable, and stylish.',
-    size: ['M', 'L', 'XL', 'XXL'],
-    stock: 'available',
-    color: 'Beige',
-  },
-  {
-    id: 17,
-    name: 'Henley Shirt',
-    price: 23.99,
-    image: '/p1.png',
-    description: 'Buttoned collar, casual style, soft cotton.',
-    size: ['S', 'M', 'L', 'XL'],
-    stock: 'available',
-    color: 'White',
-  },
-  {
-    id: 18,
-    name: 'Puffer Jacket',
-    price: 69.99,
-    image: '/p2.png',
-    description: 'Warm, lightweight, and water-resistant.',
-    size: ['M', 'L', 'XL'],
-    stock: 'out',
-    color: 'Gray',
-  },
-  {
-    id: 19,
-    name: 'A-Line Dress',
-    price: 38.99,
-    image: '/p3.png',
-    description: 'Classic A-line, flattering fit, versatile.',
-    size: ['S', 'M', 'L'],
-    stock: 'available',
-    color: 'Yellow',
-  },
-  {
-    id: 20,
-    name: 'Jogger Shorts',
-    price: 22.99,
-    image: '/p4.png',
-    description: 'Casual shorts, drawstring waist, comfy.',
-    size: ['M', 'L', 'XL', 'XXL'],
-    stock: 'available',
-    color: 'Blue',
-  },
-  {
-    id: 21,
-    name: 'Crewneck Sweatshirt',
-    price: 26.99,
-    image: '/p1.png',
-    description: 'Classic crewneck, soft fleece, everyday wear.',
-    size: ['S', 'M', 'L', 'XL'],
-    stock: 'available',
-    color: 'White',
-  },
-  {
-    id: 22,
-    name: 'Trench Coat',
-    price: 79.99,
-    image: '/p2.png',
-    description: 'Timeless trench, belted waist, water-repellent.',
-    size: ['M', 'L', 'XL'],
-    stock: 'out',
-    color: 'Black',
-  },
-  {
-    id: 23,
-    name: 'Tiered Midi Dress',
-    price: 49.99,
-    image: '/p3.png',
-    description: 'Tiered layers, midi length, feminine style.',
-    size: ['S', 'M', 'L'],
-    stock: 'available',
-    color: 'Red',
-  },
-  {
-    id: 24,
-    name: 'Utility Pants',
-    price: 33.99,
-    image: '/p4.png',
-    description: 'Functional pockets, modern fit, durable.',
-    size: ['M', 'L', 'XL', 'XXL'],
-    stock: 'available',
-    color: 'Beige',
-  },
-];
-
-const repeatedProducts = products; // Now 24 unique products
+// Products will be loaded from API
 const allSizes = ['S', 'M', 'L', 'XL', 'XXL'];
-const allColors = [
-  'White', 'Blue', 'Yellow', 'Gray', 'Navy', 'Black', 'Red', 'Beige',
-  // add all unique colors used in products
-];
+
+// Product interface for API data
+interface Product {
+  id: number;
+  name: string;
+  basePrice: number;
+  description: string;
+  imageUrls: string[];
+  sizes: Array<{
+    sizeId: number;
+    sizeName: string;
+    stockQuantity: number;
+    price: number;
+  }>;
+  colors: Array<{
+    colorId: number;
+    colorName: string;
+  }>;
+  totalStock: number;
+  categoryId: number;
+  categoryName: string;
+}
 
 const ProductList = () => {
+  const [products, setProducts] = React.useState<Product[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
   const [price, setPrice] = React.useState(50);
   const [selectedSizes, setSelectedSizes] = React.useState<string[]>([]);
   const [stock, setStock] = React.useState<{ available: boolean; out: boolean }>({ available: false, out: false });
@@ -370,21 +167,60 @@ const ProductList = () => {
     setStock((prev) => ({ ...prev, [type]: !prev[type] }));
   };
 
+  // Get available colors from products
+  const getAvailableColors = () => {
+    const colorSet = new Set<string>();
+    products.forEach(product => {
+      if (product.colors) {
+        product.colors.forEach(color => {
+          colorSet.add(color.colorName);
+        });
+      }
+    });
+    return Array.from(colorSet).sort();
+  };
+
+  const availableColors = getAvailableColors();
+
+  // Fetch products when component mounts
+  React.useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/get-products');
+        const data = await response.json();
+        
+        if (data.success) {
+          setProducts(data.products || []);
+        } else {
+          setError(data.error || 'Failed to fetch products');
+        }
+      } catch (err) {
+        setError('Failed to fetch products');
+        console.error('Error fetching products:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
   // Filter logic
-  const filteredProducts = repeatedProducts.filter((product) => {
-    const matchesPrice = product.price <= price;
+  const filteredProducts = products.filter((product) => {
+    const matchesPrice = product.basePrice <= price;
     const matchesSize =
-      selectedSizes.length === 0 || product.size.some((s: string) => selectedSizes.includes(s));
+      selectedSizes.length === 0 || product.sizes.some((s) => selectedSizes.includes(s.sizeName));
     const matchesStock =
       (!stock.available && !stock.out) ||
-      (stock.available && product.stock === 'available') ||
-      (stock.out && product.stock === 'out');
+      (stock.available && product.totalStock > 0) ||
+      (stock.out && product.totalStock === 0);
     const matchesSearch =
       search.trim() === '' ||
       product.name.toLowerCase().includes(search.toLowerCase()) ||
       product.description.toLowerCase().includes(search.toLowerCase());
     const matchesColor =
-      selectedColors.length === 0 || selectedColors.includes(product.color);
+      selectedColors.length === 0 || (product.colors && product.colors.some(color => selectedColors.includes(color.colorName)));
     return matchesPrice && matchesSize && matchesStock && matchesSearch && matchesColor;
   });
 
@@ -456,7 +292,7 @@ const ProductList = () => {
           <div>
             <Label className="mb-2 block">Color</Label>
             <div className="flex flex-wrap gap-2">
-              {allColors.map((color) => (
+              {availableColors.map((color: string) => (
                 <Button
                   key={color}
                   variant={selectedColors.includes(color) ? 'default' : 'outline'}
@@ -501,6 +337,7 @@ const ProductList = () => {
 
   return (
     <div className="w-full px-2 sm:px-4 py-12">
+      <style dangerouslySetInnerHTML={{ __html: carouselStyles }} />
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
         {/* Sidebar */}
         <aside className="lg:col-span-1 mb-8 lg:mb-0 flex flex-col items-stretch min-w-0 lg:min-w-[320px] max-w-full lg:sticky lg:top-24">
@@ -567,7 +404,7 @@ const ProductList = () => {
                   <div>
                     <Label className="mb-2 block">Color</Label>
                     <div className="flex flex-wrap gap-2">
-                      {allColors.map((color) => (
+                      {availableColors.map((color: string) => (
                         <Button
                           key={color}
                           variant={selectedColors.includes(color) ? 'default' : 'outline'}
@@ -618,43 +455,101 @@ const ProductList = () => {
             <h1 className="text-3xl sm:text-4xl font-semibold text-center">The best <span className="text-[#ffcb74]">products</span> are here.</h1>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
-            {paginatedProducts.length === 0 ? (
+            {loading ? (
+              <div className="col-span-full text-center text-muted-foreground py-16 text-lg">Loading products...</div>
+            ) : error ? (
+              <div className="col-span-full text-center text-red-500 py-16 text-lg">{error}</div>
+            ) : paginatedProducts.length === 0 ? (
               <div className="col-span-full text-center text-muted-foreground py-16 text-lg">No products found.</div>
             ) : (
               paginatedProducts.map((item) => (
-                <Link key={item.id} href={`/product/${item.id}`} className="group cursor-pointer bg-card text-card-foreground rounded-2xl border border-gray-200 overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-105">
-                  <div className="aspect-square bg-gray-50 overflow-hidden">
-                    <Image
-                      src={item.image}
-                      alt={item.name}
-                      width={500}
-                      height={500}
-                      className="w-full h-full object-contain p-6 transition-transform duration-300 group-hover:scale-110"
-                    />
+                <Link key={item.id} href={`/product/${item.id}`} className={`group cursor-pointer bg-card text-card-foreground rounded-2xl border border-gray-200 overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-105 relative ${item.totalStock === 0 ? 'opacity-60' : ''}`}>
+                  {/* Out of Stock Overlay */}
+                  {item.totalStock === 0 && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-20">
+                      <div className="bg-red-500 text-white px-4 py-2 rounded-lg font-semibold text-sm">
+                        Out of Stock
+                      </div>
+                    </div>
+                  )}
+                  <div className="aspect-square bg-gray-50 overflow-hidden relative">
+                    {item.imageUrls && item.imageUrls.length > 1 ? (
+                      <>
+                        {/* Image count indicator */}
+                        <div className="absolute top-2 right-2 z-10 bg-black/70 text-white text-xs px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                          {item.imageUrls.length} images
+                        </div>
+                        {/* Main image */}
+                        <Image
+                          src={item.imageUrls[0]}
+                          alt={item.name}
+                          width={500}
+                          height={500}
+                          className="w-full h-full object-contain p-6 transition-all duration-500 group-hover:opacity-0"
+                        />
+                        {/* Hover images carousel */}
+                        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 image-carousel">
+                          {item.imageUrls.map((imageUrl: string, index: number) => (
+                            <Image
+                              key={index}
+                              src={imageUrl}
+                              alt={`${item.name} - Image ${index + 1}`}
+                              width={500}
+                              height={500}
+                              className="absolute inset-0 w-full h-full object-contain p-6"
+                            />
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <Image
+                        src={item.imageUrls && item.imageUrls.length > 0 ? item.imageUrls[0] : '/p1.png'}
+                        alt={item.name}
+                        width={500}
+                        height={500}
+                        className="w-full h-full object-contain p-6 transition-transform duration-300 group-hover:scale-110"
+                      />
+                    )}
                   </div>
                   <div className="p-6">
                     <div className="mb-4">
                       <h3 className="text-lg font-medium text-foreground mb-2">{item.name}</h3>
                       <p className="text-sm text-muted-foreground font-mono min-h-[40px] leading-relaxed">{item.description}</p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className="text-xs">Color:</span>
-                        <span className="inline-block w-4 h-4 rounded-full border" style={{ backgroundColor: item.color.toLowerCase() }} title={item.color}></span>
-                        <span className="text-xs text-muted-foreground">{item.color}</span>
+                      {item.colors && item.colors.length > 0 && (
+                        <ColorDots colors={item.colors} className="mt-2" />
+                      )}
+                      {/* Stock Status */}
+                      <div className="mt-2">
+                        {item.totalStock === 0 ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            Out of Stock
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            In Stock ({item.totalStock})
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-2xl font-medium text-foreground">${item.price.toFixed(2)}</span>
-                      <Button
-                        className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center p-0 hover:bg-primary/90 transition-all duration-200"
-                        variant="default"
-                        aria-label={`Add ${item.name} to cart`}
-                        type="button"
-                        tabIndex={-1}
-                        onClick={e => e.preventDefault()}
-                      >
-                        +
-                        <span className="sr-only">Add to Cart</span>
-                      </Button>
+                      <span className="text-2xl font-medium text-foreground">${item.basePrice.toFixed(2)}</span>
+                      {item.totalStock === 0 ? (
+                        <div className="w-10 h-10 rounded-full bg-gray-300 text-gray-500 flex items-center justify-center p-0 cursor-not-allowed">
+                          <span className="text-xs">×</span>
+                        </div>
+                      ) : (
+                        <Button
+                          className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center p-0 hover:bg-primary/90 transition-all duration-200"
+                          variant="default"
+                          aria-label={`Add ${item.name} to cart`}
+                          type="button"
+                          tabIndex={-1}
+                          onClick={e => e.preventDefault()}
+                        >
+                          +
+                          <span className="sr-only">Add to Cart</span>
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </Link>

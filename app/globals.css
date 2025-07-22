@@ -120,3 +120,29 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Image carousel animation */
+@keyframes fadeInOut {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+  10%, 90% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Custom animation for image carousel */
+.animate-fade-in-out {
+  animation: fadeInOut 2s ease-in-out infinite;
+}
+
+/* Smooth transitions for image carousel */
+.group:hover .image-carousel img {
+  animation-play-state: running;
+}
+
+.group:not(:hover) .image-carousel img {
+  animation-play-state: paused;
+}
