@@ -1,5 +1,6 @@
 "use client"
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import { Heart, Clock, Package, Star, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,22 +11,101 @@ import Footer from '@/components/ui/footer';
 import { useAuth } from '@/lib/auth-hook';
 import { toast } from 'sonner';
 
+// TypeScript interfaces for the product data
+interface ProductColor {
+  id: number;
+  name: string;
+}
+
+interface ProductSize {
+  id: number;
+  name: string;
+  stockQuantity: number;
+  price?: number;
+}
+
+interface ProductImage {
+  id: number;
+  url: string;
+  altText?: string;
+  isPrimary?: boolean;
+}
+
+interface Product {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  qty: number;
+  categoryName?: string;
+  colors: ProductColor[];
+  sizes: ProductSize[];
+  images: ProductImage[];
+}
+
 const ProductPage = () => {
+  const params = useParams();
+  const productId = params.id;
   const { isAuthenticated, addToCart } = useAuth();
-  const [selectedSize, setSelectedSize] = useState('S');
+  const [selectedSize, setSelectedSize] = useState('');
+  const [selectedColor, setSelectedColor] = useState('');
   const [selectedImage, setSelectedImage] = useState(0);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isDescriptionOpen, setIsDescriptionOpen] = useState(true);
   const [isShippingOpen, setIsShippingOpen] = useState(true);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const productImages = [
-    '/p1.png',
-    '/p2.png',
-    '/p3.png',
-    '/p4.png',
-  ];
+  // Fetch product data when component mounts
+  useEffect(() => {
+    const fetchProduct = async () => {
+      if (!productId) return;
+      
+      console.log('Fetching product with ID:', productId);
+      
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/get-single-product?id=${productId}`);
+        const data = await response.json();
+        
+        console.log('API Response:', data);
+        
+        if (data.success) {
+          setProduct(data.product);
+          console.log('Product loaded successfully:', data.product);
+          
+          // Set default selections if available
+          if (data.product.sizes && data.product.sizes.length > 0) {
+            setSelectedSize(data.product.sizes[0].name);
+          }
+          if (data.product.colors && data.product.colors.length > 0) {
+            setSelectedColor(data.product.colors[0].name);
+          }
+        } else {
+          setError(data.error || 'Failed to fetch product');
+          console.error('API Error:', data.error);
+        }
+      } catch (err) {
+        setError('Failed to fetch product');
+        console.error('Error fetching product:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const sizes = ['S', 'M', 'L', 'XL', 'XXL'];
+    fetchProduct();
+  }, [productId]);
+
+  // Set default selected image to primary image if available
+  useEffect(() => {
+    if (product && product.images && product.images.length > 0) {
+      const primaryImageIndex = product.images.findIndex(img => img.isPrimary);
+      if (primaryImageIndex !== -1) {
+        setSelectedImage(primaryImageIndex);
+      }
+    }
+  }, [product]);
 
   const recommendations = [
     {
@@ -68,10 +148,15 @@ const ProductPage = () => {
       return;
     }
 
+    if (!product) {
+      toast.error("Product data not available");
+      return;
+    }
+
     // Show loading state and store the toast ID
     const loadingToast = toast.loading("Adding to cart...");
     
-    const result = await addToCart(1, 1, 1);
+    const result = await addToCart(product.id, 1, 1);
     
     // Dismiss the loading toast
     toast.dismiss(loadingToast);
@@ -92,11 +177,53 @@ const ProductPage = () => {
     ));
   };
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading product...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 text-lg">{error}</p>
+          <Button 
+            onClick={() => window.location.reload()} 
+            className="mt-4"
+          >
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Product not found
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600 text-lg">Product not found</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Get product images from backend response or use fallback
+  const productImages = product.images && product.images.length > 0 
+    ? product.images.map((img: ProductImage) => img.url)
+    : ['/p1.png', '/p2.png', '/p3.png', '/p4.png']; // Fallback images
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Product Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-20">
@@ -106,13 +233,19 @@ const ProductPage = () => {
               <div className="aspect-square">
                 <img
                   src={productImages[selectedImage]}
-                  alt="Loose Fit Hoodie"
+                  alt={product.images && product.images[selectedImage]?.altText 
+                    ? product.images[selectedImage].altText 
+                    : product.name}
                   className="w-full h-full object-contain p-8"
+                  onError={(e) => {
+                    // Fallback to a default image if the URL fails
+                    e.currentTarget.src = '/p1.png';
+                  }}
                 />
               </div>
             </div>
             <div className="flex gap-3 justify-center">
-              {productImages.map((image, index) => (
+              {productImages.map((image: string, index: number) => (
                 <div
                   key={index}
                   className={`w-20 h-20 rounded-xl overflow-hidden border-2 cursor-pointer transition-all duration-200 ${
@@ -125,8 +258,13 @@ const ProductPage = () => {
                   <div className="w-full h-full bg-white">
                     <img
                       src={image}
-                      alt={`View ${index + 1}`}
+                      alt={product.images && product.images[index]?.altText 
+                        ? product.images[index].altText 
+                        : `${product.name} - View ${index + 1}`}
                       className="w-full h-full object-contain p-2"
+                      onError={(e) => {
+                        e.currentTarget.src = '/p1.png';
+                      }}
                     />
                   </div>
                 </div>
@@ -138,12 +276,12 @@ const ProductPage = () => {
           <div className="space-y-8">
             <div className="space-y-4">
               <Badge variant="outline" className="text-gray-600 border-gray-300 bg-white">
-                Men Fashion
+                {product.categoryName || 'Fashion'}
               </Badge>
               <h1 className="text-4xl lg:text-5xl font-light text-gray-900 leading-tight">
-                Loose Fit Hoodie
+                {product.name}
               </h1>
-              <div className="text-3xl font-medium text-gray-900">$24.99</div>
+              <div className="text-3xl font-medium text-gray-900">${product.price}</div>
             </div>
             
             <div className="flex items-center gap-3 text-sm text-gray-600 bg-amber-50 p-4 rounded-lg">
@@ -151,26 +289,63 @@ const ProductPage = () => {
               <span>Order in 02:30:35 to get next day delivery</span>
             </div>
 
-            {/* Size Selector */}
-            <div className="space-y-4">
-              <Label className="text-lg font-medium text-gray-900">Size</Label>
-              <div className="flex gap-3">
-                {sizes.map((size) => (
-                  <Button
-                    key={size}
-                    variant="outline"
-                    className={`px-6 py-3 text-sm font-medium rounded-lg border transition-all duration-200 ${
-                      selectedSize === size 
-                        ? 'bg-gray-900 text-white border-gray-900' 
-                        : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
-                    }`}
-                    onClick={() => setSelectedSize(size)}
-                  >
-                    {size}
-                  </Button>
-                ))}
+            {/* Color Selector */}
+            {product.colors && product.colors.length > 0 && (
+              <div className="space-y-4">
+                <Label className="text-lg font-medium text-gray-900">Color</Label>
+                <div className="flex gap-3">
+                  {product.colors.map((color: ProductColor) => (
+                    <Button
+                      key={color.id}
+                      variant="outline"
+                      className={`px-6 py-3 text-sm font-medium rounded-lg border transition-all duration-200 ${
+                        selectedColor === color.name 
+                          ? 'bg-gray-900 text-white border-gray-900' 
+                          : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                      }`}
+                      onClick={() => setSelectedColor(color.name)}
+                    >
+                      {color.name}
+                    </Button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Size Selector */}
+            {product.sizes && product.sizes.length > 0 && (
+              <div className="space-y-4">
+                <Label className="text-lg font-medium text-gray-900">Size</Label>
+                <div className="flex gap-3">
+                  {product.sizes.map((size: ProductSize) => (
+                    <Button
+                      key={size.id}
+                      variant="outline"
+                      className={`px-6 py-3 text-sm font-medium rounded-lg border transition-all duration-200 ${
+                        selectedSize === size.name 
+                          ? 'bg-gray-900 text-white border-gray-900' 
+                          : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                      }`}
+                      onClick={() => setSelectedSize(size.name)}
+                    >
+                      {size.name}
+                      {size.stockQuantity !== undefined && (
+                        <span className="ml-2 text-xs text-gray-500">
+                          ({size.stockQuantity})
+                        </span>
+                      )}
+                    </Button>
+                  ))}
+                </div>
+                {/* Show selected size price if different from base price */}
+                {selectedSize && product.sizes.find(s => s.name === selectedSize)?.price && 
+                 product.sizes.find(s => s.name === selectedSize)?.price !== product.price && (
+                  <div className="text-sm text-gray-600">
+                    Price for size {selectedSize}: ${product.sizes.find(s => s.name === selectedSize)?.price}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Add to Cart */}
             <div className="flex gap-4">
@@ -202,10 +377,7 @@ const ProductPage = () => {
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <p className="text-gray-600 text-sm leading-relaxed pb-6">
-                    Loose-fit sweatshirt hoodie in medium weight cotton-blend fabric with a generous, 
-                    but not oversized silhouette. Jersey-lined, drawstring hood, dropped shoulders, 
-                    long sleeves, and a kangaroo pocket. Wide ribbing at cuffs and hem. 
-                    Soft, brushed inside.
+                    {product.description || 'No description available for this product.'}
                   </p>
                 </CollapsibleContent>
               </Collapsible>
@@ -253,7 +425,7 @@ const ProductPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Rating Overview */}
             <div className="flex flex-col items-center justify-center">
-              <div className="text-6xl font-light text-gray-900 mb-2">4.5</div>
+              <div className="text-6xl font-semibold text-gray-900 mb-2">4.5</div>
               <div className="text-lg text-gray-500 mb-4">out of 5</div>
               <div className="text-sm text-gray-600">50 reviews</div>
             </div>
