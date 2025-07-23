@@ -51,6 +51,7 @@ export default function CheckoutPage() {
   });
   const [promo, setPromo] = useState('');
   const [note, setNote] = useState('');
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   // Fetch cart data on component mount
   useEffect(() => {
@@ -267,6 +268,46 @@ export default function CheckoutPage() {
   const discount = promo.trim().toUpperCase() === 'SAVE10' ? 10 : 0;
   const subtotal = cartData?.totalPrice || 0;
   const total = Math.max(0, subtotal - discount);
+
+  const handlePlaceOrder = async () => {
+    if (!cartData || !formData.firstName || !formData.lastName || !formData.email) {
+      alert('Please fill in all required shipping information');
+      return;
+    }
+
+    setIsProcessingPayment(true);
+
+    try {
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          cartData: cartData,
+          shippingData: {
+            ...formData,
+            note: note
+          }
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success && data.url) {
+        // Redirect to Stripe checkout
+        window.location.href = data.url;
+      } else {
+        alert(data.error || 'Failed to create checkout session');
+      }
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      alert('Network error. Please try again.');
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -648,9 +689,13 @@ export default function CheckoutPage() {
                       <span>Secure checkout – your information is protected</span>
                     </div>
                     
-                    <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 mt-4 sm:mt-6 py-2 sm:py-3 text-base sm:text-lg font-bold rounded-xl shadow-md transition-colors">
-                      Place Order
-                    </Button>
+                                         <Button 
+                       className="w-full bg-primary text-primary-foreground hover:bg-primary/90 mt-4 sm:mt-6 py-2 sm:py-3 text-base sm:text-lg font-bold rounded-xl shadow-md transition-colors"
+                       onClick={handlePlaceOrder}
+                       disabled={isProcessingPayment}
+                     >
+                       {isProcessingPayment ? 'Processing...' : 'Place Order'}
+                     </Button>
                   </div>
                 </div>
               </CardContent>
