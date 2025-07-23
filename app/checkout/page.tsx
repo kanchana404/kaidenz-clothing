@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Minus, Plus, Lock, Star, HelpCircle, Mail, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,78 +9,188 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import Footer from '@/components/ui/footer';
+import { useAuth } from '@/lib/auth-hook';
+import { useRouter } from 'next/navigation';
 
-// Dummy product data for testing
-type ProductKey = 'sentinel' | 'boa' | 'urban' | 'hoodie' | 'parka';
+interface CartItem {
+  id: number;
+  product: {
+    id: number;
+    name: string;
+    basePrice: number;
+    description: string;
+    imageUrls: string[];
+  };
+  color: {
+    id: number;
+    name: string;
+  };
+  qty: number;
+}
 
-const PRODUCTS = [
-  {
-    id: 1,
-    name: 'Sentinel Jacket',
-    image: '/p1.png',
-    price: 49.0,
-    details: 'Size: L\nColor: Gray',
-    key: 'sentinel',
-  },
-  {
-    id: 2,
-    name: 'Boa Fleece Jacket',
-    image: '/p2.png',
-    price: 122.0,
-    details: 'Size: L\nColor: Black Navy',
-    key: 'boa',
-  },
-  {
-    id: 3,
-    name: 'Urban Windbreaker',
-    image: '/p3.png',
-    price: 89.0,
-    details: 'Size: M\nColor: Blue',
-    key: 'urban',
-  },
-  {
-    id: 4,
-    name: 'Classic Hoodie',
-    image: '/p4.png',
-    price: 59.0,
-    details: 'Size: XL\nColor: Black',
-    key: 'hoodie',
-  },
-  {
-    id: 5,
-    name: 'Lightweight Parka',
-    image: '/p1.png',
-    price: 99.0,
-    details: 'Size: S\nColor: Olive',
-    key: 'parka',
-  },
-];
-
-const PRODUCTS_PER_PAGE = 2;
+interface CartData {
+  items: CartItem[];
+  totalPrice: number;
+}
 
 export default function CheckoutPage() {
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
+  const [cartData, setCartData] = useState<CartData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
     address: '',
-    country: '',
     province: '',
     city: '',
     postalCode: ''
   });
-
-  const [quantities, setQuantities] = useState<Record<ProductKey, number>>({
-    sentinel: 1,
-    boa: 1,
-    urban: 1,
-    hoodie: 1,
-    parka: 1,
-  });
-  const [page, setPage] = useState(1);
   const [promo, setPromo] = useState('');
   const [note, setNote] = useState('');
+
+  // Fetch cart data on component mount
+  useEffect(() => {
+    const fetchCart = async () => {
+      if (!isAuthenticated) {
+        setError('Please sign in to checkout');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const response = await fetch('/api/get-cart', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+        });
+
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          if (data.cartData && data.cartData.items && data.cartData.items.length > 0) {
+            setCartData(data.cartData);
+            setError(null);
+          } else {
+            setError('Your cart is empty');
+            setCartData(null);
+          }
+        } else {
+          if (response.status === 401) {
+            setError('Please sign in to checkout');
+          } else {
+            setError(data.error || 'Failed to fetch cart');
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching cart:', error);
+        setError('Network error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCart();
+  }, [isAuthenticated]);
+
+  // Fetch user information to pre-fill shipping form
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      if (!isAuthenticated) return;
+
+      try {
+        // First fetch user info from /api/userinfo
+        const userInfoResponse = await fetch('/api/userinfo', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+        });
+
+        const userInfoData = await userInfoResponse.json();
+        
+        if (userInfoResponse.ok && userInfoData.authenticated) {
+          // Then fetch address data from /api/user-address
+          try {
+            const addressResponse = await fetch('/api/user-address', {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              credentials: 'include',
+            });
+
+            if (addressResponse.ok) {
+              const addressData = await addressResponse.json();
+              
+              if (addressData.status === 'success' && addressData.address) {
+                // Pre-fill the form with complete user data
+                setFormData({
+                  firstName: userInfoData.first_name || userInfoData.firstName || '',
+                  lastName: userInfoData.last_name || userInfoData.lastName || '',
+                  email: userInfoData.email || '',
+                  phone: addressData.address.phone?.toString() || '',
+                  address: addressData.address.line1 + (addressData.address.line2 ? ', ' + addressData.address.line2 : ''),
+                  province: addressData.address.province_name || '',
+                  city: addressData.address.city_name || '',
+                  postalCode: addressData.address.postal_code || ''
+                });
+              } else {
+                // Fallback to userinfo data only
+                setFormData({
+                  firstName: userInfoData.first_name || userInfoData.firstName || '',
+                  lastName: userInfoData.last_name || userInfoData.lastName || '',
+                  email: userInfoData.email || '',
+                  phone: '',
+                  address: userInfoData.address || '',
+                  province: userInfoData.province || '',
+                  city: userInfoData.city || '',
+                  postalCode: userInfoData.postal_code || userInfoData.postalCode || ''
+                });
+              }
+            } else {
+              // Fallback to userinfo data only
+              setFormData({
+                firstName: userInfoData.first_name || userInfoData.firstName || '',
+                lastName: userInfoData.last_name || userInfoData.lastName || '',
+                email: userInfoData.email || '',
+                phone: '',
+                address: userInfoData.address || '',
+                province: userInfoData.province || '',
+                city: userInfoData.city || '',
+                postalCode: userInfoData.postal_code || userInfoData.postalCode || ''
+              });
+            }
+          } catch (addressError) {
+            console.error('Error fetching address data:', addressError);
+            // Fallback to userinfo data only
+            setFormData({
+              firstName: userInfoData.first_name || userInfoData.firstName || '',
+              lastName: userInfoData.last_name || userInfoData.lastName || '',
+              email: userInfoData.email || '',
+              phone: '',
+              address: userInfoData.address || '',
+              province: userInfoData.province || '',
+              city: userInfoData.city || '',
+              postalCode: userInfoData.postal_code || userInfoData.postalCode || ''
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user info:', error);
+        // Don't show error for user info, just use empty form
+      }
+    };
+
+    fetchUserInfo();
+  }, [isAuthenticated]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -88,6 +198,7 @@ export default function CheckoutPage() {
       [e.target.name]: e.target.value
     });
   };
+
   const handleTextAreaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setFormData({
       ...formData,
@@ -102,29 +213,124 @@ export default function CheckoutPage() {
     });
   };
 
-  const updateQuantity = (item: ProductKey, delta: number) => {
-    setQuantities(prev => ({
-      ...prev,
-      [item]: Math.max(1, prev[item] + delta)
-    }));
-  };
+  const updateQuantity = async (itemId: number, delta: number) => {
+    if (!cartData) return;
 
-  // Pagination logic
-  const totalPages = Math.ceil(PRODUCTS.length / PRODUCTS_PER_PAGE);
-  const paginatedProducts = PRODUCTS.slice(
-    (page - 1) * PRODUCTS_PER_PAGE,
-    page * PRODUCTS_PER_PAGE
-  );
-  // Add blank placeholders if less than PRODUCTS_PER_PAGE
-  const placeholders = Array(PRODUCTS_PER_PAGE - paginatedProducts.length).fill(null);
+    const currentItem = cartData.items.find(item => item.id === itemId);
+    if (!currentItem) return;
+
+    const newQuantity = currentItem.qty + delta;
+    if (newQuantity <= 0) return; // Don't allow quantity to go below 1
+
+    try {
+      const response = await fetch('/api/update-cart', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          cartItemId: itemId,
+          quantity: newQuantity
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        // Update local state
+        setCartData(prev => {
+          if (!prev) return prev;
+          
+          const updatedItems = prev.items.map(item => 
+            item.id === itemId ? { ...item, qty: newQuantity } : item
+          );
+          
+          const newTotalPrice = updatedItems.reduce((sum, item) => 
+            sum + (item.product.basePrice * item.qty), 0
+          );
+          
+          return {
+            items: updatedItems,
+            totalPrice: newTotalPrice
+          };
+        });
+      } else {
+        console.error('Failed to update quantity:', data.error);
+      }
+    } catch (error) {
+      console.error('Error updating quantity:', error);
+    }
+  };
 
   // For demo, assume a $10 discount if promo code is 'SAVE10'
   const discount = promo.trim().toUpperCase() === 'SAVE10' ? 10 : 0;
-  const subtotal = PRODUCTS.reduce(
-    (sum, product) => sum + product.price * (quantities[product.key as ProductKey] || 1),
-    0
-  );
+  const subtotal = cartData?.totalPrice || 0;
   const total = Math.max(0, subtotal - discount);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background text-foreground w-full flex flex-col">
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-muted-foreground text-lg font-light">Loading checkout...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background text-foreground w-full flex flex-col">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-muted-foreground text-lg font-light mb-6">{error}</p>
+            {!isAuthenticated && (
+              <div className="space-x-4">
+                <Button 
+                  onClick={() => router.push('/sign-in')}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  Sign In
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => router.push('/sign-up')}
+                >
+                  Sign Up
+                </Button>
+              </div>
+            )}
+            {isAuthenticated && (
+              <Button 
+                onClick={() => router.push('/cart')}
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                Back to Cart
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!cartData || cartData.items.length === 0) {
+    return (
+      <div className="min-h-screen bg-background text-foreground w-full flex flex-col">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-muted-foreground text-lg font-light mb-6">Your cart is empty</p>
+            <Button 
+              onClick={() => router.push('/')}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              Continue Shopping
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground w-full flex flex-col">
@@ -233,64 +439,66 @@ export default function CheckoutPage() {
                 />
               </div>
               
-              {/* Country and Province row */}
+              {/* Province and City row */}
               <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="country" className="text-sm sm:text-base">Country</Label>
-                  <Select onValueChange={(value) => handleSelectChange('country', value)}>
-                    <SelectTrigger className="rounded-lg text-sm sm:text-base py-2 sm:py-3">
-                      <SelectValue placeholder="Country" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="us">United States</SelectItem>
-                      <SelectItem value="ca">Canada</SelectItem>
-                      <SelectItem value="uk">United Kingdom</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
                   <Label htmlFor="province" className="text-sm sm:text-base">Province</Label>
-                  <Select onValueChange={(value) => handleSelectChange('province', value)}>
+                  <Select onValueChange={(value) => handleSelectChange('province', value)} value={formData.province}>
                     <SelectTrigger className="rounded-lg text-sm sm:text-base py-2 sm:py-3" title="Enter your province/state">
                       <SelectValue placeholder="Province" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="ca">California</SelectItem>
-                      <SelectItem value="ny">New York</SelectItem>
-                      <SelectItem value="tx">Texas</SelectItem>
+                      <SelectItem value="Central Province">Central Province</SelectItem>
+                      <SelectItem value="Eastern Province">Eastern Province</SelectItem>
+                      <SelectItem value="Northern Province">Northern Province</SelectItem>
+                      <SelectItem value="North Central Province">North Central Province</SelectItem>
+                      <SelectItem value="North Western Province">North Western Province</SelectItem>
+                      <SelectItem value="Sabaragamuwa Province">Sabaragamuwa Province</SelectItem>
+                      <SelectItem value="Southern Province">Southern Province</SelectItem>
+                      <SelectItem value="Uva Province">Uva Province</SelectItem>
+                      <SelectItem value="Western Province">Western Province</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="city" className="text-sm sm:text-base">City</Label>
+                  <Select onValueChange={(value) => handleSelectChange('city', value)} value={formData.city}>
+                    <SelectTrigger className="rounded-lg text-sm sm:text-base py-2 sm:py-3">
+                      <SelectValue placeholder="City" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Colombo">Colombo</SelectItem>
+                      <SelectItem value="Kandy">Kandy</SelectItem>
+                      <SelectItem value="Galle">Galle</SelectItem>
+                      <SelectItem value="Jaffna">Jaffna</SelectItem>
+                      <SelectItem value="Negombo">Negombo</SelectItem>
+                      <SelectItem value="Anuradhapura">Anuradhapura</SelectItem>
+                      <SelectItem value="Ratnapura">Ratnapura</SelectItem>
+                      <SelectItem value="Trincomalee">Trincomalee</SelectItem>
+                      <SelectItem value="Matara">Matara</SelectItem>
+                      <SelectItem value="Batticaloa">Batticaloa</SelectItem>
+                      <SelectItem value="Badulla">Badulla</SelectItem>
+                      <SelectItem value="Kurunegala">Kurunegala</SelectItem>
+                      <SelectItem value="Polonnaruwa">Polonnaruwa</SelectItem>
+                      <SelectItem value="Nuwara Eliya">Nuwara Eliya</SelectItem>
+                      <SelectItem value="Hambantota">Hambantota</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               
-              {/* City and Postal Code row */}
-              <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="city" className="text-sm sm:text-base">City</Label>
-                  <Select onValueChange={(value) => handleSelectChange('city', value)}>
-                    <SelectTrigger className="rounded-lg text-sm sm:text-base py-2 sm:py-3">
-                      <SelectValue placeholder="City" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="la">Los Angeles</SelectItem>
-                      <SelectItem value="ny">New York</SelectItem>
-                      <SelectItem value="chicago">Chicago</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="postalCode" className="text-sm sm:text-base">Postal Code</Label>
-                  <Select onValueChange={(value) => handleSelectChange('postalCode', value)}>
-                    <SelectTrigger className="rounded-lg text-sm sm:text-base py-2 sm:py-3" title="Enter your postal code">
-                      <SelectValue placeholder="Postal code" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="90210">90210</SelectItem>
-                      <SelectItem value="10001">10001</SelectItem>
-                      <SelectItem value="60601">60601</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              {/* Postal Code row */}
+              <div className="space-y-2">
+                <Label htmlFor="postalCode" className="text-sm sm:text-base">Postal Code</Label>
+                <Input
+                  id="postalCode"
+                  name="postalCode"
+                  type="text"
+                  value={formData.postalCode}
+                  onChange={handleInputChange}
+                  placeholder="Enter your postal code"
+                  className="rounded-lg text-sm sm:text-base py-2 sm:py-3"
+                />
               </div>
               
               {/* Note/Instructions Field */}
@@ -314,13 +522,13 @@ export default function CheckoutPage() {
             <Card className="bg-card border border-border rounded-xl shadow-md">
               <CardContent className="p-3 sm:p-4">
                 <div className="space-y-6 sm:space-y-8">
-                  {/* Paginated Products */}
-                  {paginatedProducts.map((product) => (
-                    <div key={product.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 min-h-[140px] sm:min-h-[180px]">
+                  {/* Cart Items */}
+                  {cartData.items.map((item) => (
+                    <div key={item.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 min-h-[140px] sm:min-h-[180px]">
                       <div className="w-full sm:w-36 md:w-40 lg:w-44 h-36 sm:h-36 md:h-40 lg:h-44 bg-muted rounded-xl flex items-center justify-center overflow-hidden shadow-md mx-auto sm:mx-0 flex-shrink-0">
                         <Image 
-                          src={product.image} 
-                          alt={product.name} 
+                          src={item.product.imageUrls && item.product.imageUrls.length > 0 ? item.product.imageUrls[0] : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQ0IiBoZWlnaHQ9IjE0NCIgdmlld0JveD0iMCAwIDE0NCAxNDQiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxNDQiIGhlaWdodD0iMTQ0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik03MiAzNkM2MS45NTQzIDM2IDU0IDQzLjk1NDMgNTQgNTRDNTQgNjQuMDQ1NyA2MS45NTQzIDcyIDcyQzgxLjA0NTcgNzIgODkgNjQuMDQ1NyA4OSA1NEM4OSA0My45NTQzIDgxLjA0NTcgMzYgNzIgMzZaIiBmaWxsPSIjOTRBM0E2Ii8+CjxwYXRoIGQ9Ik0zNiAxMDhDMzYgOTcuOTU0MyA0My45NTQzIDkwIDU0IDkwSDkwQzEwMC4wNDYgOTAgMTA4IDk3Ljk1NDMgMTA4IDEwOFYxMjBIMzZWMTA4WiIgZmlsbD0iIzk0QTNBNiIvPgo8L3N2Zz4K'} 
+                          alt={item.product.name} 
                           width={176} 
                           height={176} 
                           className="object-cover w-32 sm:w-32 md:w-36 lg:w-40 h-32 sm:h-32 md:h-36 lg:h-40 rounded-lg" 
@@ -336,82 +544,43 @@ export default function CheckoutPage() {
                             <span className="bg-primary/20 text-primary px-2 py-0.5 rounded text-xs font-semibold">Best Seller</span>
                           </div>
                         </div>
-                        <h3 className="font-bold text-sm sm:text-base text-foreground mb-1">{product.name}</h3>
-                        <div className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 whitespace-pre-line">{product.details}</div>
+                        <h3 className="font-bold text-sm sm:text-base text-foreground mb-1">{item.product.name}</h3>
+                        <div className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3">
+                          {item.product.description.split('\n').map((line, i) => (
+                            <div key={i}>{line}</div>
+                          ))}
+                          {item.color && <div>Color: {item.color.name}</div>}
+                        </div>
                         <div className="flex items-center justify-between sm:justify-start">
                           <div className="flex items-center space-x-2">
                             <Button
                               variant="outline"
                               size="icon"
                               className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-border transition-shadow hover:shadow-md"
-                              onClick={() => updateQuantity(product.key as ProductKey, -1)}
+                              onClick={() => updateQuantity(item.id, -1)}
                             >
                               <Minus className="w-3 h-3 sm:w-4 sm:h-4" />
                             </Button>
-                            <span className="text-sm sm:text-base font-bold text-foreground min-w-[20px] text-center">{quantities[product.key as ProductKey]}</span>
+                            <span className="text-sm sm:text-base font-bold text-foreground min-w-[20px] text-center">{item.qty}</span>
                             <Button
                               variant="default"
                               size="icon"
                               className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-shadow hover:shadow-md"
-                              onClick={() => updateQuantity(product.key as ProductKey, 1)}
+                              onClick={() => updateQuantity(item.id, 1)}
                             >
                               <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
                             </Button>
                           </div>
                           <div className="text-right sm:hidden">
-                            <div className="font-bold text-lg sm:text-2xl text-foreground">${(product.price * quantities[product.key as ProductKey]).toFixed(2)}</div>
+                            <div className="font-bold text-lg sm:text-2xl text-foreground">${(item.product.basePrice * item.qty).toFixed(2)}</div>
                           </div>
                         </div>
                       </div>
                       <div className="hidden sm:block text-right">
-                        <div className="font-bold text-lg md:text-xl lg:text-2xl text-foreground">${(product.price * quantities[product.key as ProductKey]).toFixed(2)}</div>
+                        <div className="font-bold text-lg md:text-xl lg:text-2xl text-foreground">${(item.product.basePrice * item.qty).toFixed(2)}</div>
                       </div>
                     </div>
                   ))}
-                  
-                  {/* Blank placeholders to keep height consistent */}
-                  {placeholders.map((_, idx) => (
-                    <div key={`placeholder-${idx}`} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 min-h-[140px] sm:min-h-[180px] opacity-0 pointer-events-none select-none">
-                      <div className="w-full sm:w-36 md:w-40 lg:w-44 h-36 sm:h-36 md:h-40 lg:h-44 rounded-xl flex-shrink-0" />
-                      <div className="flex-1 w-full min-w-0" />
-                      <div className="hidden sm:block text-right" />
-                    </div>
-                  ))}
-                  
-                  {/* Pagination Controls */}
-                  <div className="flex justify-center gap-1 sm:gap-2 mt-4 overflow-x-auto pb-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="rounded-full px-2 sm:px-3 py-1 text-xs sm:text-sm whitespace-nowrap"
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      disabled={page === 1}
-                    >
-                      Previous
-                    </Button>
-                    <div className="flex gap-1 sm:gap-2">
-                      {Array.from({ length: totalPages }, (_, i) => (
-                        <Button
-                          key={i + 1}
-                          variant={page === i + 1 ? 'default' : 'outline'}
-                          size="sm"
-                          className={`rounded-full px-2 sm:px-3 py-1 text-xs sm:text-sm min-w-[28px] sm:min-w-[32px] ${page === i + 1 ? 'bg-primary text-primary-foreground' : ''}`}
-                          onClick={() => setPage(i + 1)}
-                        >
-                          {i + 1}
-                        </Button>
-                      ))}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="rounded-full px-2 sm:px-3 py-1 text-xs sm:text-sm whitespace-nowrap"
-                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                      disabled={page === totalPages}
-                    >
-                      Next
-                    </Button>
-                  </div>
                   
                   <Separator />
                   
