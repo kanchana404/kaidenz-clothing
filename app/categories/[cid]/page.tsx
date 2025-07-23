@@ -10,6 +10,8 @@ import { Filter } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import ColorDots from '@/components/color-dots';
 import Image from 'next/image';
+import { useAuth } from '@/lib/auth-hook';
+import { toast } from 'sonner';
 
 // CSS for image carousel animations with gaps
 const carouselStyles = `
@@ -55,6 +57,7 @@ interface Product {
 const allSizes = ['S', 'M', 'L', 'XL', 'XXL'];
 
 const CategoryPage = () => {
+  const { isAuthenticated, addToCart } = useAuth();
   const params = useParams();
   const categoryName = params.cid as string;
   
@@ -82,6 +85,30 @@ const CategoryPage = () => {
 
   const handleStockToggle = (type: 'available' | 'out') => {
     setStock((prev) => ({ ...prev, [type]: !prev[type] }));
+  };
+
+  const handleAddToCart = async (e: React.MouseEvent, productId: number, productName: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!isAuthenticated) {
+      toast.error("You have to sign in to add products to the cart");
+      return;
+    }
+
+    // Show loading state and store the toast ID
+    const loadingToast = toast.loading("Adding to cart...");
+    
+    const result = await addToCart(productId, 1, 1);
+    
+    // Dismiss the loading toast
+    toast.dismiss(loadingToast);
+    
+    if (result.success) {
+      toast.success(`${productName} added to cart!`);
+    } else {
+      toast.error(result.error || "Failed to add product to cart");
+    }
   };
 
   // Get available colors from products
@@ -460,7 +487,7 @@ const CategoryPage = () => {
                             aria-label={`Add ${item.name} to cart`}
                             type="button"
                             tabIndex={-1}
-                            onClick={e => e.preventDefault()}
+                            onClick={(e) => handleAddToCart(e, item.id, item.name)}
                           >
                             +
                             <span className="sr-only">Add to Cart</span>

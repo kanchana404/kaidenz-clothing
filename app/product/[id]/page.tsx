@@ -7,8 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import Footer from '@/components/ui/footer';
+import { useAuth } from '@/lib/auth-hook';
+import { toast } from 'sonner';
 
 const ProductPage = () => {
+  const { isAuthenticated, addToCart } = useAuth();
   const [selectedSize, setSelectedSize] = useState('S');
   const [selectedImage, setSelectedImage] = useState(0);
   const [isWishlisted, setIsWishlisted] = useState(false);
@@ -59,8 +62,25 @@ const ProductPage = () => {
     }
   ];
 
-  const handleAddToCart = () => {
-    // Add to cart logic here
+  const handleAddToCart = async () => {
+    if (!isAuthenticated) {
+      toast.error("You have to sign in to add products to the cart");
+      return;
+    }
+
+    // Show loading state and store the toast ID
+    const loadingToast = toast.loading("Adding to cart...");
+    
+    const result = await addToCart(1, 1, 1);
+    
+    // Dismiss the loading toast
+    toast.dismiss(loadingToast);
+    
+    if (result.success) {
+      toast.success("Product added to cart!");
+    } else {
+      toast.error(result.error || "Failed to add product to cart");
+    }
   };
 
   const renderStars = (rating: number) => {

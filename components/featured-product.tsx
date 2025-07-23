@@ -1,7 +1,10 @@
+"use client"
 import React from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useAuth } from '@/lib/auth-hook';
+import { toast } from 'sonner';
 
 const featuredProducts = [
   {
@@ -43,6 +46,32 @@ const featuredProducts = [
 ];
 
 const HealthyFoodMenu = () => {
+  const { isAuthenticated, addToCart } = useAuth();
+
+  const handleAddToCart = async (e: React.MouseEvent, productId: number, productName: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!isAuthenticated) {
+      toast.error("You have to sign in to add products to the cart");
+      return;
+    }
+
+    // Show loading state and store the toast ID
+    const loadingToast = toast.loading("Adding to cart...");
+    
+    const result = await addToCart(productId, 1, 1); // Default quantity 1, color ID 1
+    
+    // Dismiss the loading toast
+    toast.dismiss(loadingToast);
+    
+    if (result.success) {
+      toast.success(`${productName} added to cart!`);
+    } else {
+      toast.error(result.error || "Failed to add product to cart");
+    }
+  };
+
   return (
     <div className="w-full bg-background py-16 px-4">
       <div className="max-w-7xl mx-auto">
@@ -95,7 +124,7 @@ const HealthyFoodMenu = () => {
                     aria-label={`Add ${item.name} to cart`}
                     type="button"
                     tabIndex={-1}
-                    onClick={e => e.preventDefault()}
+                    onClick={(e) => handleAddToCart(e, item.id, item.name)}
                   >
                     <Plus size={18} />
                     <span className="sr-only">Add to Cart</span>

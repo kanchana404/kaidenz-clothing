@@ -6,26 +6,7 @@ import Footer from "@/components/ui/footer";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Minus, Plus, Trash2 } from "lucide-react";
-
-// Dummy cart data
-const DUMMY_CART = [
-  {
-    id: 1,
-    name: "Sentinel Jacket",
-    image: "/p1.png",
-    price: 49.0,
-    quantity: 1,
-    details: "Size: L\nColor: Gray",
-  },
-  {
-    id: 2,
-    name: "Boa Fleece Jacket",
-    image: "/p2.png",
-    price: 122.0,
-    quantity: 2,
-    details: "Size: L\nColor: Black Navy",
-  },
-];
+import { useAuth } from '@/lib/auth-hook';
 
 // Dummy recommended products
 const RECOMMENDED = [
@@ -59,64 +40,166 @@ const RECOMMENDED = [
   },
 ];
 
-export default function CartPage() {
-  const [cart, setCart] = useState(DUMMY_CART);
+interface CartItem {
+  id: number;
+  product: {
+    id: number;
+    name: string;
+    basePrice: number;
+    description: string;
+    imageUrls: string[];
+  };
+  color: {
+    id: number;
+    name: string;
+  };
+  qty: number;
+}
 
-  // Send POST request to /api/cart (which forwards to /CheckSession) on page load
+export default function CartPage() {
+  const { isAuthenticated, fetchCartCount, cartCount } = useAuth();
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [totalPrice, setTotalPrice] = useState(0);
+
+  // Fetch cart data from API
   useEffect(() => {
-    const checkSession = async () => {
+    const fetchCart = async () => {
       try {
-        console.log("Cart page loaded - sending POST request to /api/cart");
-        const response = await fetch("/api/cart", {
-          method: "POST",
+        setLoading(true);
+        const response = await fetch('/api/get-cart', {
+          method: 'GET',
           headers: {
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
-          credentials: "include",
-          body: JSON.stringify({}), // Empty POST request as requested
+          credentials: 'include',
         });
 
         const data = await response.json();
-        console.log("Cart API response:", data);
         
-        if (response.ok) {
-          if (data.authenticated) {
-            console.log("User is authenticated:", data);
-            // You can use the user data here
-            // data.user_id, data.email, data.first_name, data.last_name, etc.
+        if (response.ok && data.success) {
+          // Use the actual cart items from the API response
+          console.log('Cart data received:', data);
+          if (data.cartData && data.cartData.items) {
+            setCartItems(data.cartData.items);
+            setTotalPrice(data.cartData.totalPrice || 0);
           } else {
-            console.log("User is not authenticated:", data.message);
-            // Handle unauthenticated user - maybe redirect to login
+            setCartItems([]);
+            setTotalPrice(0);
           }
+          setError(null); // Clear any previous errors
         } else {
-          console.error("Cart API error:", data);
+          if (response.status === 401) {
+            setError('Please sign in to view your cart');
+          } else {
+            setError(data.error || 'Failed to fetch cart');
+          }
         }
       } catch (error) {
-        console.error("Error calling cart API:", error);
+        console.error('Error fetching cart:', error);
+        setError('Network error');
+      } finally {
+        setLoading(false);
       }
     };
 
-    checkSession();
-  }, []);
+    // Only fetch if authenticated, otherwise show sign-in message
+    if (isAuthenticated) {
+      fetchCart();
+    } else {
+      setLoading(false);
+      setError('Please sign in to view your cart');
+    }
+  }, [isAuthenticated]);
 
-  const updateQuantity = (id: number, delta: number) => {
-    setCart((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-          : item
-      )
-    );
+  // Refresh cart when cart count changes (after adding items)
+  useEffect(() => {
+    if (isAuthenticated && cartCount > 0) {
+      // Refresh cart data when cart count changes
+      const fetchCart = async () => {
+        try {
+          const response = await fetch('/api/get-cart', {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+          });
+
+          const data = await response.json();
+          
+          if (response.ok && data.success && data.cartData) {
+            setCartItems(data.cartData.items || []);
+            setTotalPrice(data.cartData.totalPrice || 0);
+          }
+        } catch (error) {
+          console.error('Error refreshing cart:', error);
+        }
+      };
+      
+      fetchCart();
+    }
+  }, [cartCount, isAuthenticated]);
+
+  const updateQuantity = async (id: number, delta: number) => {
+    const currentItem = cartItems.find(item => item.id === id);
+    if (!currentItem) return;
+
+    const newQuantity = currentItem.qty + delta;
+    if (newQuantity <= 0) {
+      // If quantity would be 0 or negative, remove the item
+      await removeItem(id);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/update-cart', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          cartItemId: id,
+          quantity: newQuantity
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        // Update local state immediately for better UX
+        setCartItems(prevItems => 
+          prevItems.map(item => 
+            item.id === id ? { ...item, qty: newQuantity } : item
+          )
+        );
+        
+        // Recalculate total price
+        const updatedItems = cartItems.map(item => 
+          item.id === id ? { ...item, qty: newQuantity } : item
+        );
+        const newTotal = updatedItems.reduce((sum, item) => 
+          sum + (item.product.basePrice * item.qty), 0
+        );
+        setTotalPrice(newTotal);
+        
+        // Refresh cart count
+        await fetchCartCount();
+      } else {
+        console.error('Failed to update quantity:', data.error);
+      }
+    } catch (error) {
+      console.error('Error updating quantity:', error);
+    }
   };
 
   const removeItem = (id: number) => {
-    setCart((prev) => prev.filter((item) => item.id !== id));
+    setCartItems(prev => prev.filter(item => item.id !== id));
   };
 
-  const subtotal = cart.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
+  const totalCount = cartItems.reduce((sum, item) => sum + item.qty, 0);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -124,14 +207,36 @@ export default function CartPage() {
         {/* Header */}
         <div className="mb-12">
           <h1 className="text-3xl font-light tracking-wide text-center">Shopping Cart</h1>
-          {cart.length > 0 && (
+          {cartItems.length > 0 && (
             <p className="text-center text-muted-foreground mt-2 text-sm">
-              {cart.length} {cart.length === 1 ? 'item' : 'items'}
+              {cartItems.length} {cartItems.length === 1 ? 'item' : 'items'}
             </p>
           )}
         </div>
 
-        {cart.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-24">
+            <p className="text-muted-foreground text-lg font-light">Loading your cart...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-24">
+            <p className="text-muted-foreground text-lg font-light mb-6">{error}</p>
+            {!isAuthenticated && (
+              <div className="space-x-4">
+                <Link href="/sign-in">
+                  <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+                    Sign In
+                  </Button>
+                </Link>
+                <Link href="/sign-up">
+                  <Button variant="outline">
+                    Sign Up
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </div>
+        ) : cartItems.length === 0 ? (
           <div className="text-center py-24">
             <p className="text-muted-foreground text-lg font-light">Your cart is empty</p>
           </div>
@@ -140,25 +245,25 @@ export default function CartPage() {
             {/* Cart Items */}
             <div className="lg:col-span-2">
               <div className="space-y-8">
-                {cart.map((item, index) => (
+                {cartItems.map((item, index) => (
                   <div key={item.id}>
                     <div className="flex gap-6 py-6">
                       {/* Product Image */}
                       <div className="w-40 h-40 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
                         <Image 
-                          src={item.image} 
-                          alt={item.name} 
+                          src={item.product.imageUrls && item.product.imageUrls.length > 0 ? item.product.imageUrls[0] : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQ0IiBoZWlnaHQ9IjE0NCIgdmlld0JveD0iMCAwIDE0NCAxNDQiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxNDQiIGhlaWdodD0iMTQ0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik03MiAzNkM2MS45NTQzIDM2IDU0IDQzLjk1NDMgNTQgNTRDNTQgNjQuMDQ1NyA2MS45NTQzIDcyIDcyQzgxLjA0NTcgNzIgODkgNjQuMDQ1NyA4OSA1NEM4OSA0My45NTQzIDgxLjA0NTcgMzYgNzIgMzZaIiBmaWxsPSIjOTRBM0E2Ii8+CjxwYXRoIGQ9Ik0zNiAxMDhDMzYgOTcuOTU0MyA0My45NTQzIDkwIDU0IDkwSDkwQzEwMC4wNDYgOTAgMTA4IDk3Ljk1NDMgMTA4IDEwOFYxMjBIMzZWMTA4WiIgZmlsbD0iIzk0QTNBNiIvPgo8L3N2Zz4K'}
+                          alt={item.product.name} 
                           width={144} 
                           height={144} 
-                          className="object-contain w-36 h-36 bg-white rounded-md" 
+                          className="object-contain w-36 h-36 bg-white rounded-md"
                         />
                       </div>
 
                       {/* Product Details */}
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-lg">{item.name}</h3>
+                        <h3 className="font-medium text-lg">{item.product.name}</h3>
                         <div className="text-sm text-muted-foreground mt-1 space-y-1">
-                          {item.details.split('\n').map((line, i) => (
+                          {item.product.description.split('\n').map((line, i) => (
                             <div key={i}>{line}</div>
                           ))}
                         </div>
@@ -173,7 +278,7 @@ export default function CartPage() {
                           >
                             <Minus className="w-3 h-3" />
                           </Button>
-                          <span className="w-8 text-center font-medium">{item.quantity}</span>
+                          <span className="w-8 text-center font-medium">{item.qty}</span>
                           <Button
                             variant="outline"
                             size="icon"
@@ -190,17 +295,17 @@ export default function CartPage() {
                         <button
                           onClick={() => removeItem(item.id)}
                           className="text-muted-foreground hover:text-destructive transition-colors p-1"
-                          aria-label={`Remove ${item.name} from cart`}
-                          title={`Remove ${item.name} from cart`}
+                          aria-label={`Remove ${item.product.name} from cart`}
+                          title={`Remove ${item.product.name} from cart`}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
                         <div className="font-medium text-lg">
-                          ${(item.price * item.quantity).toFixed(2)}
+                          ${(item.product.basePrice * item.qty).toFixed(2)}
                         </div>
                       </div>
                     </div>
-                    {index < cart.length - 1 && <Separator className="opacity-30" />}
+                    {index < cartItems.length - 1 && <Separator className="opacity-30" />}
                   </div>
                 ))}
               </div>
@@ -215,7 +320,7 @@ export default function CartPage() {
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Subtotal</span>
-                      <span>${subtotal.toFixed(2)}</span>
+                      <span>${totalPrice.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Shipping</span>
@@ -231,7 +336,7 @@ export default function CartPage() {
                   
                   <div className="flex justify-between font-medium text-lg">
                     <span>Total</span>
-                    <span>${subtotal.toFixed(2)}</span>
+                    <span>${totalPrice.toFixed(2)}</span>
                   </div>
                   
                   <Link href="/checkout" className="block w-full mt-6">

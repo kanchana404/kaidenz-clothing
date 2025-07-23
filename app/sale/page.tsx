@@ -3,6 +3,8 @@ import React from "react";
 import Footer from "@/components/ui/footer";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import { useAuth } from '@/lib/auth-hook';
+import { toast } from 'sonner';
 
 const saleProducts = [
   { id: 1, name: "Sentinel Jacket", price: 49.0, image: "/p1.png", discount: 30 },
@@ -12,6 +14,29 @@ const saleProducts = [
 ];
 
 export default function SalePage() {
+  const { isAuthenticated, addToCart } = useAuth();
+
+  const handleAddToCart = async (productId: number, productName: string) => {
+    if (!isAuthenticated) {
+      toast.error("You have to sign in to add products to the cart");
+      return;
+    }
+
+    // Show loading state and store the toast ID
+    const loadingToast = toast.loading("Adding to cart...");
+    
+    const result = await addToCart(productId, 1, 1);
+    
+    // Dismiss the loading toast
+    toast.dismiss(loadingToast);
+    
+    if (result.success) {
+      toast.success(`${productName} added to cart!`);
+    } else {
+      toast.error(result.error || "Failed to add product to cart");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-orange-100 to-pink-50 flex flex-col">
       {/* Hero Section */}
@@ -38,7 +63,12 @@ export default function SalePage() {
                   <span className="text-2xl font-bold text-[#ff7e5f]">${(product.price * (1 - product.discount / 100)).toFixed(2)}</span>
                   <span className="text-base line-through text-gray-400">${product.price.toFixed(2)}</span>
                 </div>
-                <Button className="w-full bg-[#ffcb74] text-[#111] font-bold rounded-lg mt-2">Add to Cart</Button>
+                <Button 
+                  className="w-full bg-[#ffcb74] text-[#111] font-bold rounded-lg mt-2"
+                  onClick={() => handleAddToCart(product.id, product.name)}
+                >
+                  Add to Cart
+                </Button>
               </div>
             </div>
           ))}
