@@ -3,34 +3,64 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import Footer from '@/components/ui/footer';
 import { Sheet, SheetTrigger, SheetContent } from '@/components/ui/sheet';
-import { Filter } from 'lucide-react';
+import { Filter, Search } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import ColorDots from '@/components/color-dots';
 import Image from 'next/image';
 import { useAuth } from '@/lib/auth-hook';
 import { toast } from 'sonner';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 
-// CSS for image carousel animations with gaps
+// CSS for modern image carousel animations
 const carouselStyles = `
-  @keyframes fadeInOut {
-    0%, 100% { opacity: 0; }
-    20%, 80% { opacity: 1; }
+  @keyframes smoothFade {
+    0%, 100% { opacity: 0; transform: scale(1.02); }
+    25%, 75% { opacity: 1; transform: scale(1.05); }
   }
   
-  .image-carousel img {
+  .modern-carousel img {
     opacity: 0;
-    animation: fadeInOut 4s infinite;
+    animation: smoothFade 5s infinite ease-in-out;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
-  .image-carousel img:nth-child(1) { animation-delay: 0s; }
-  .image-carousel img:nth-child(2) { animation-delay: 2s; }
-  .image-carousel img:nth-child(3) { animation-delay: 4s; }
-  .image-carousel img:nth-child(4) { animation-delay: 6s; }
-  .image-carousel img:nth-child(5) { animation-delay: 8s; }
+  .modern-carousel img:nth-child(1) { animation-delay: 0s; }
+  .modern-carousel img:nth-child(2) { animation-delay: 1.5s; }
+  .modern-carousel img:nth-child(3) { animation-delay: 3s; }
+  .modern-carousel img:nth-child(4) { animation-delay: 4.5s; }
+  .modern-carousel img:nth-child(5) { animation-delay: 6s; }
 `;
+
+// Modern Product Loading Skeleton
+const ProductSkeleton = () => (
+  <div className="group rounded-3xl border border-neutral-100 overflow-hidden transition-all duration-300">
+    <div className="aspect-square overflow-hidden relative">
+      <Skeleton className="w-full h-full" />
+    </div>
+    <div className="p-6 space-y-3">
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-3/4" />
+        <Skeleton className="h-3 w-full" />
+        <Skeleton className="h-3 w-2/3" />
+        <div className="flex gap-1 mt-3">
+          <Skeleton className="h-2 w-2 rounded-full" />
+          <Skeleton className="h-2 w-2 rounded-full" />
+          <Skeleton className="h-2 w-2 rounded-full" />
+        </div>
+        <Skeleton className="h-5 w-16 rounded-full mt-3" />
+      </div>
+      <div className="flex justify-between items-center pt-2">
+        <Skeleton className="h-6 w-12" />
+        <Skeleton className="h-8 w-8 rounded-full" />
+      </div>
+    </div>
+  </div>
+);
 
 // Product interface
 interface Product {
@@ -96,12 +126,8 @@ const CategoryPage = () => {
       return;
     }
 
-    // Show loading state and store the toast ID
     const loadingToast = toast.loading("Adding to cart...");
-    
     const result = await addToCart(productId, 1, 1);
-    
-    // Dismiss the loading toast
     toast.dismiss(loadingToast);
     
     if (result.success) {
@@ -111,7 +137,6 @@ const CategoryPage = () => {
     }
   };
 
-  // Get available colors from products
   const getAvailableColors = () => {
     const colorSet = new Set<string>();
     products.forEach(product => {
@@ -126,7 +151,6 @@ const CategoryPage = () => {
 
   const availableColors = getAvailableColors();
 
-  // Fetch products when component mounts
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -152,7 +176,6 @@ const CategoryPage = () => {
     }
   }, [categoryName]);
 
-  // Filter logic
   const filteredProducts = products.filter((product) => {
     const matchesPrice = product.basePrice <= price;
     const matchesSize =
@@ -170,336 +193,284 @@ const CategoryPage = () => {
     return matchesPrice && matchesSize && matchesStock && matchesSearch && matchesColor;
   });
 
-  // Filter UI as a component for reuse
   const FilterCard = (
-    <div>
-      <Card className="bg-card border border-border w-full lg:w-80">
-        <CardHeader>
-          <h2 className="text-xl font-semibold mb-2">Filters</h2>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-8">
-          {/* Search Filter */}
-          <div>
-            <Label htmlFor="search" className="mb-2 block">Search</Label>
-            <input
-              id="search"
+    <Card className="border-neutral-100 shadow-none">
+      <CardHeader className="pb-4">
+        <h2 className="text-lg font-medium text-neutral-900">Filters</h2>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Search Filter */}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium text-neutral-700">Search</Label>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400 h-4 w-4" />
+            <Input
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search products..."
-              className="w-full border rounded-md px-3 py-2 text-base shadow-xs outline-none focus:ring-2 focus:ring-primary"
+              className="pl-10 border-neutral-200 focus:border-neutral-300 focus:ring-neutral-200"
             />
           </div>
-          {/* Price Filter */}
-          <div>
-            <Label htmlFor="price-range" className="mb-2 block">Price (up to ${price})</Label>
-            <input
-              id="price-range"
-              type="range"
-              min={10}
-              max={100}
-              step={1}
-              value={price}
-              onChange={(e) => setPrice(Number(e.target.value))}
-              className="w-full accent-primary"
-              aria-label="Price range"
-            />
-            <div className="flex justify-between text-xs text-muted-foreground mt-1">
-              <span>$10</span>
-              <span>$100</span>
-            </div>
+        </div>
+
+        {/* Price Filter */}
+        <div className="space-y-3">
+          <Label className="text-sm font-medium text-neutral-700">Price (up to ${price})</Label>
+          <input
+            type="range"
+            min={10}
+            max={100}
+            step={1}
+            value={price}
+            onChange={(e) => setPrice(Number(e.target.value))}
+            className="w-full h-1 bg-neutral-200 rounded-lg appearance-none cursor-pointer slider"
+          />
+          <div className="flex justify-between text-xs text-neutral-500">
+            <span>$10</span>
+            <span>$100</span>
           </div>
-          {/* Size Filter */}
-          <div>
-            <Label className="mb-2 block">Size</Label>
-            <div className="flex flex-wrap gap-2">
-              {allSizes.map((size) => (
-                <Button
-                  key={size}
-                  variant={selectedSizes.includes(size) ? 'default' : 'outline'}
-                  className="px-4 py-2 text-sm rounded-md"
-                  onClick={() => handleSizeToggle(size)}
-                  type="button"
-                >
-                  {size}
-                </Button>
-              ))}
-            </div>
+        </div>
+
+        {/* Size Filter */}
+        <div className="space-y-3">
+          <Label className="text-sm font-medium text-neutral-700">Size</Label>
+          <div className="flex flex-wrap gap-2">
+            {allSizes.map((size) => (
+              <Button
+                key={size}
+                variant={selectedSizes.includes(size) ? 'default' : 'outline'}
+                size="sm"
+                className={`h-8 px-3 text-xs font-medium rounded-full border-neutral-200 ${
+                  selectedSizes.includes(size) 
+                    ? 'bg-neutral-900 text-white border-neutral-900 hover:bg-neutral-800' 
+                    : 'text-neutral-600 hover:bg-neutral-50'
+                }`}
+                onClick={() => handleSizeToggle(size)}
+              >
+                {size}
+              </Button>
+            ))}
           </div>
-          {/* Color Filter */}
-          <div>
-            <Label className="mb-2 block">Color</Label>
-            <div className="flex flex-wrap gap-2">
-              {availableColors.map((color: string) => (
-                <Button
-                  key={color}
-                  variant={selectedColors.includes(color) ? 'default' : 'outline'}
-                  className="px-4 py-2 text-sm rounded-md"
-                  onClick={() => handleColorToggle(color)}
-                  type="button"
-                  style={{ backgroundColor: selectedColors.includes(color) ? color.toLowerCase() : undefined, color: selectedColors.includes(color) ? '#fff' : undefined }}
-                >
-                  {color}
-                </Button>
-              ))}
-            </div>
+        </div>
+
+        {/* Color Filter */}
+        <div className="space-y-3">
+          <Label className="text-sm font-medium text-neutral-700">Color</Label>
+          <div className="flex flex-wrap gap-2">
+            {availableColors.map((color: string) => (
+              <Button
+                key={color}
+                variant={selectedColors.includes(color) ? 'default' : 'outline'}
+                size="sm"
+                className={`h-8 px-3 text-xs font-medium rounded-full border-neutral-200 ${
+                  selectedColors.includes(color) 
+                    ? 'bg-neutral-900 text-white border-neutral-900 hover:bg-neutral-800' 
+                    : 'text-neutral-600 hover:bg-neutral-50'
+                }`}
+                onClick={() => handleColorToggle(color)}
+              >
+                {color}
+              </Button>
+            ))}
           </div>
-          {/* Stock Filter */}
-          <div>
-            <Label className="mb-2 block">Stock</Label>
-            <div className="flex flex-col gap-2">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={stock.available}
-                  onChange={() => handleStockToggle('available')}
-                  className="accent-primary rounded"
-                />
-                <span>Available</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={stock.out}
-                  onChange={() => handleStockToggle('out')}
-                  className="accent-primary rounded"
-                />
-                <span>Out of Stock</span>
-              </label>
-            </div>
+        </div>
+
+        {/* Stock Filter */}
+        <div className="space-y-3">
+          <Label className="text-sm font-medium text-neutral-700">Stock</Label>
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={stock.available}
+                onChange={() => handleStockToggle('available')}
+                className="rounded border-neutral-300 text-neutral-900 focus:ring-neutral-200"
+              />
+              <span className="text-sm text-neutral-600">Available</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={stock.out}
+                onChange={() => handleStockToggle('out')}
+                className="rounded border-neutral-300 text-neutral-900 focus:ring-neutral-200"
+              />
+              <span className="text-sm text-neutral-600">Out of Stock</span>
+            </label>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 
   return (
-    <div className="min-h-screen bg-background w-full">
+    <div className="min-h-screen w-full">
       <style dangerouslySetInnerHTML={{ __html: carouselStyles }} />
-      <div className="w-full px-2 sm:px-4 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
-          {/* Sidebar */}
-          <aside className="lg:col-span-1 mb-8 lg:mb-0 flex flex-col items-stretch min-w-0 lg:min-w-[320px] max-w-full lg:sticky lg:top-24">
-            {/* Show filter button on small screens */}
-            <div className="block lg:hidden mb-4">
-              <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
-                <SheetTrigger asChild>
-                  <Button className="w-full flex items-center gap-2" variant="outline" onClick={() => setFilterOpen(true)}>
-                    <Filter className="w-4 h-4" />
-                    Filters
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="max-w-xs w-full p-0 bg-white text-foreground">
-                  <div className="p-4 flex flex-col gap-8">
-                    {/* Search Filter */}
-                    <div>
-                      <Label htmlFor="search" className="mb-2 block">Search</Label>
-                      <input
-                        id="search"
-                        type="text"
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        placeholder="Search products..."
-                        className="w-full border rounded-md px-3 py-2 text-base shadow-xs outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
-                    {/* Price Filter */}
-                    <div>
-                      <Label htmlFor="price-range" className="mb-2 block">Price (up to ${price})</Label>
-                      <input
-                        id="price-range"
-                        type="range"
-                        min={10}
-                        max={100}
-                        step={1}
-                        value={price}
-                        onChange={(e) => setPrice(Number(e.target.value))}
-                        className="w-full accent-primary"
-                        aria-label="Price range"
-                      />
-                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                        <span>$10</span>
-                        <span>$100</span>
-                      </div>
-                    </div>
-                    {/* Size Filter */}
-                    <div>
-                      <Label className="mb-2 block">Size</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {allSizes.map((size) => (
-                          <Button
-                            key={size}
-                            variant={selectedSizes.includes(size) ? 'default' : 'outline'}
-                            className="px-4 py-2 text-sm rounded-md"
-                            onClick={() => handleSizeToggle(size)}
-                            type="button"
-                          >
-                            {size}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                    {/* Color Filter */}
-                    <div>
-                      <Label className="mb-2 block">Color</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {availableColors.map((color: string) => (
-                          <Button
-                            key={color}
-                            variant={selectedColors.includes(color) ? 'default' : 'outline'}
-                            className="px-4 py-2 text-sm rounded-md"
-                            onClick={() => handleColorToggle(color)}
-                            type="button"
-                            style={{ backgroundColor: selectedColors.includes(color) ? color.toLowerCase() : undefined, color: selectedColors.includes(color) ? '#fff' : undefined }}
-                          >
-                            {color}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                    {/* Stock Filter */}
-                    <div>
-                      <Label className="mb-2 block">Stock</Label>
-                      <div className="flex flex-col gap-2">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={stock.available}
-                            onChange={() => handleStockToggle('available')}
-                            className="accent-primary rounded"
-                          />
-                          <span>Available</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={stock.out}
-                            onChange={() => handleStockToggle('out')}
-                            className="accent-primary rounded"
-                          />
-                          <span>Out of Stock</span>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </SheetContent>
-              </Sheet>
-            </div>
-            {/* Show sidebar on large screens */}
-            <div className="hidden lg:block w-full lg:w-80">{FilterCard}</div>
-          </aside>
+      <div className="w-full px-4 sm:px-6 py-16">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            {/* Sidebar */}
+            <aside className="lg:col-span-1">
+              {/* Mobile filter button */}
+              <div className="lg:hidden mb-6">
+                <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
+                  <SheetTrigger asChild>
+                    <Button variant="outline" className="w-full border-neutral-200 text-neutral-700 hover:bg-neutral-50">
+                      <Filter className="w-4 h-4 mr-2" />
+                      Filters
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="left" className="w-80 p-6">
+                    {FilterCard}
+                  </SheetContent>
+                </Sheet>
+              </div>
+              {/* Desktop filter card */}
+              <div className="hidden lg:block sticky top-6">
+                {FilterCard}
+              </div>
+            </aside>
 
-          {/* Product Grid */}
-          <section className="lg:col-span-4 w-full">
-            {/* Category Header */}
-            <div className="w-full flex justify-center mb-8">
-              <h1 className="text-3xl sm:text-4xl font-semibold text-center capitalize">
-                {categoryName.replace('-', ' ')} <span className="text-[#ffcb74]">Collection</span>
-              </h1>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
-              {loading ? (
-                <div className="col-span-full text-center text-muted-foreground py-16 text-lg">Loading products...</div>
-              ) : error ? (
-                <div className="col-span-full text-center text-red-500 py-16 text-lg">{error}</div>
-              ) : filteredProducts.length === 0 ? (
-                <div className="col-span-full text-center text-muted-foreground py-16 text-lg">No products found.</div>
-              ) : (
-                filteredProducts.map((item) => (
-                  <Link key={item.id} href={`/product/${item.id}`} className={`group cursor-pointer bg-card text-card-foreground rounded-2xl border border-gray-200 overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-105 relative ${item.totalStock === 0 ? 'opacity-60' : ''}`}>
-                    {/* Out of Stock Overlay */}
-                    {item.totalStock === 0 && (
-                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-20">
-                        <div className="bg-red-500 text-white px-4 py-2 rounded-lg font-semibold text-sm">
-                          Out of Stock
+            {/* Product Grid */}
+            <section className="lg:col-span-3">
+              {/* Header */}
+              <div className="mb-12 text-center">
+                <h1 className="text-4xl sm:text-5xl font-light text-neutral-900 tracking-tight">
+                  {categoryName.replace('-', ' ')}{' '}
+                  <span className="font-medium text-amber-400">Collection</span>
+                </h1>
+                <p className="text-neutral-600 mt-4 text-lg">
+                  Discover our curated selection of premium products
+                </p>
+              </div>
+
+              {/* Products Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {loading ? (
+                  Array.from({ length: 9 }).map((_, index) => (
+                    <ProductSkeleton key={index} />
+                  ))
+                ) : error ? (
+                  <div className="col-span-full text-center text-red-500 py-20 text-lg">{error}</div>
+                ) : filteredProducts.length === 0 ? (
+                  <div className="col-span-full text-center text-neutral-500 py-20 text-lg">
+                    No products found matching your criteria.
+                  </div>
+                ) : (
+                  filteredProducts.map((item) => (
+                    <Link 
+                      key={item.id} 
+                      href={`/product/${item.id}`} 
+                      className={`group rounded-3xl border border-neutral-100 overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-neutral-200 relative ${
+                        item.totalStock === 0 ? 'opacity-60' : ''
+                      }`}
+                    >
+                      {/* Out of Stock Overlay */}
+                      {item.totalStock === 0 && (
+                        <div className="absolute inset-0 flex items-center justify-center z-20">
+                          <Badge variant="destructive" className="text-sm font-medium">
+                            Out of Stock
+                          </Badge>
                         </div>
-                      </div>
-                    )}
-                    <div className="aspect-square bg-gray-50 overflow-hidden relative">
-                      {item.imageUrls && item.imageUrls.length > 1 ? (
-                        <>
-                          {/* Image count indicator */}
-                          <div className="absolute top-2 right-2 z-10 bg-black/70 text-white text-xs px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            {item.imageUrls.length} images
-                          </div>
-                          {/* Main image */}
-                          <Image
-                            src={item.imageUrls[0]}
-                            alt={item.name}
-                            width={500}
-                            height={500}
-                            className="w-full h-full object-contain p-6 transition-all duration-500 group-hover:opacity-0"
-                          />
-                          {/* Hover images carousel */}
-                          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 image-carousel">
-                            {item.imageUrls.map((imageUrl: string, index: number) => (
-                              <Image
-                                key={index}
-                                src={imageUrl}
-                                alt={`${item.name} - Image ${index + 1}`}
-                                width={500}
-                                height={500}
-                                className="absolute inset-0 w-full h-full object-contain p-6"
-                              />
-                            ))}
-                          </div>
-                        </>
-                      ) : (
-                        <Image
-                          src={item.imageUrls && item.imageUrls.length > 0 ? item.imageUrls[0] : '/p1.png'}
-                          alt={item.name}
-                          width={500}
-                          height={500}
-                          className="w-full h-full object-contain p-6 transition-transform duration-300 group-hover:scale-110"
-                        />
                       )}
-                    </div>
-                    <div className="p-6">
-                      <div className="mb-4">
-                        <h3 className="text-lg font-medium text-foreground mb-2">{item.name}</h3>
-                        <p className="text-sm text-muted-foreground font-mono min-h-[40px] leading-relaxed">{item.description}</p>
-                        {item.colors && item.colors.length > 0 && (
-                          <ColorDots colors={item.colors} className="mt-2" />
+
+                      {/* Product Image */}
+                      <div className="aspect-square overflow-hidden relative">
+                        {item.imageUrls && item.imageUrls.length > 1 ? (
+                          <>
+                            {/* Image count indicator */}
+                            <div className="absolute top-3 right-3 z-10 bg-white/90 backdrop-blur-sm text-neutral-700 text-xs px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                              {item.imageUrls.length} photos
+                            </div>
+                            {/* Main image */}
+                            <Image
+                              src={item.imageUrls[0]}
+                              alt={item.name}
+                              width={400}
+                              height={400}
+                              className="w-full h-full object-contain p-6 transition-all duration-500 group-hover:opacity-0"
+                            />
+                            {/* Hover carousel */}
+                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 modern-carousel">
+                              {item.imageUrls.map((imageUrl: string, index: number) => (
+                                <Image
+                                  key={index}
+                                  src={imageUrl}
+                                  alt={`${item.name} - Image ${index + 1}`}
+                                  width={400}
+                                  height={400}
+                                  className="absolute inset-0 w-full h-full object-contain p-6"
+                                />
+                              ))}
+                            </div>
+                          </>
+                        ) : (
+                          <Image
+                            src={item.imageUrls?.[0] || '/p1.png'}
+                            alt={item.name}
+                            width={400}
+                            height={400}
+                            className="w-full h-full object-contain p-6 transition-transform duration-300 group-hover:scale-105"
+                          />
                         )}
-                        {/* Stock Status */}
-                        <div className="mt-2">
+                      </div>
+
+                      {/* Product Info */}
+                      <div className="p-6">
+                        <div className="mb-4">
+                          <h3 className="font-medium text-neutral-900 mb-2 text-lg leading-tight">
+                            {item.name}
+                          </h3>
+                          <p className="text-sm text-neutral-500 line-clamp-2 leading-relaxed">
+                            {item.description}
+                          </p>
+                          
+                          {/* Colors */}
+                          {item.colors && item.colors.length > 0 && (
+                            <ColorDots colors={item.colors} className="mt-3" />
+                          )}
+                          
+                          {/* Stock Status */}
+                          <div className="mt-3">
+                            {item.totalStock === 0 ? (
+                              <Badge variant="secondary" className="text-xs">
+                                Out of Stock
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs border-green-200 text-green-700">
+                                In Stock ({item.totalStock})
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Price and Add to Cart */}
+                        <div className="flex justify-between items-center">
+                          <span className="text-xl font-semibold text-neutral-900">
+                            ${item.basePrice.toFixed(2)}
+                          </span>
                           {item.totalStock === 0 ? (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                              Out of Stock
-                            </span>
+                            <div className="w-9 h-9 rounded-full bg-neutral-100 text-neutral-400 flex items-center justify-center cursor-not-allowed">
+                              <span className="text-sm">×</span>
+                            </div>
                           ) : (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              In Stock ({item.totalStock})
-                            </span>
+                            <Button
+                              size="icon"
+                              className="w-9 h-9 rounded-full bg-neutral-900 hover:bg-neutral-800 text-white transition-all duration-200"
+                              onClick={(e) => handleAddToCart(e, item.id, item.name)}
+                            >
+                              <span className="text-lg font-light">+</span>
+                            </Button>
                           )}
                         </div>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-2xl font-medium text-foreground">${item.basePrice.toFixed(2)}</span>
-                        {item.totalStock === 0 ? (
-                          <div className="w-10 h-10 rounded-full bg-gray-300 text-gray-500 flex items-center justify-center p-0 cursor-not-allowed">
-                            <span className="text-xs">×</span>
-                          </div>
-                        ) : (
-                          <Button
-                            className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center p-0 hover:bg-primary/90 transition-all duration-200"
-                            variant="default"
-                            aria-label={`Add ${item.name} to cart`}
-                            type="button"
-                            tabIndex={-1}
-                            onClick={(e) => handleAddToCart(e, item.id, item.name)}
-                          >
-                            +
-                            <span className="sr-only">Add to Cart</span>
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
-                ))
-              )}
-            </div>
-          </section>
+                    </Link>
+                  ))
+                )}
+              </div>
+            </section>
+          </div>
         </div>
       </div>
       <Footer />
