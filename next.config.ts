@@ -51,6 +51,18 @@ const nextConfig: NextConfig = {
         port: "8080",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "files.stripe.com",
+        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "stripe.com",
+        port: "",
+        pathname: "/**",
+      },
     ],
   },
 };

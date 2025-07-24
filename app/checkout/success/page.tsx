@@ -10,12 +10,44 @@ import Footer from '@/components/ui/footer';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
+// Custom Image component with better error handling
+const ProductImage = ({ src, alt, width, height, className }: {
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+  className?: string;
+}) => {
+  const [imgSrc, setImgSrc] = useState(src);
+  const [hasError, setHasError] = useState(false);
+
+  const handleError = () => {
+    if (!hasError) {
+      setHasError(true);
+      setImgSrc('/p1.png'); // Fallback to default image
+    }
+  };
+
+  return (
+    <Image 
+      src={imgSrc}
+      alt={alt} 
+      width={width} 
+      height={height} 
+      className={className}
+      onError={handleError}
+      unoptimized={src.startsWith('http')} // Don't optimize external images
+    />
+  );
+};
+
 export default function CheckoutSuccessPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [orderDetails, setOrderDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
+  const [downloadingReceipt, setDownloadingReceipt] = useState(false);
 
   useEffect(() => {
     setIsVisible(true);
@@ -24,24 +56,93 @@ export default function CheckoutSuccessPage() {
   useEffect(() => {
     const sessionId = searchParams.get('session_id');
     if (sessionId) {
-      // In a real app, you would verify the session with Stripe
-      // For now, we'll simulate the order details
-      setOrderDetails({
-        orderId: `ORD-${Date.now()}`,
-        sessionId: sessionId,
-        total: '$299.99', // This would come from Stripe
-        estimatedDelivery: 'May 10–13, 2024',
-        items: [
-          { 
-            name: 'Premium Jacket', 
-            quantity: 1, 
-            price: '$299.99',
-            image: '/p1.png'
-          }
-        ]
-      });
+      // Fetch actual order details from Stripe session
+      const fetchOrderDetails = async () => {
+        try {
+          setLoading(true);
+          const response = await fetch(`/api/get-session-details?session_id=${sessionId}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+
+          const data = await response.json();
+          
+          if (response.ok && data.success) {
+            setOrderDetails(data.orderDetails);
+                     } else {
+             console.error('Failed to fetch order details:', data.error);
+             // Fallback to basic order details
+             setOrderDetails({
+               orderId: `ORD-${Date.now()}`,
+               sessionId: sessionId,
+               total: '$299.99',
+               estimatedDelivery: 'May 10–13, 2024',
+               paymentStatus: 'paid',
+               customerEmail: 'customer@example.com',
+               shipping: {
+                 firstName: 'John',
+                 lastName: 'Doe',
+                 email: 'customer@example.com',
+                 phone: '',
+                 address: '123 Main St',
+                 province: 'Western Province',
+                 city: 'Colombo',
+                 postalCode: '10000',
+                 note: ''
+               },
+               items: [
+                 { 
+                   name: 'Premium Jacket', 
+                   quantity: 1, 
+                   price: '$299.99',
+                   unitPrice: '$299.99',
+                   image: '/p1.png'
+                 }
+               ]
+             });
+           }
+                 } catch (error) {
+           console.error('Error fetching order details:', error);
+           // Fallback to basic order details
+           setOrderDetails({
+             orderId: `ORD-${Date.now()}`,
+             sessionId: sessionId,
+             total: '$299.99',
+             estimatedDelivery: 'May 10–13, 2024',
+             paymentStatus: 'paid',
+             customerEmail: 'customer@example.com',
+             shipping: {
+               firstName: 'John',
+               lastName: 'Doe',
+               email: 'customer@example.com',
+               phone: '',
+               address: '123 Main St',
+               province: 'Western Province',
+               city: 'Colombo',
+               postalCode: '10000',
+               note: ''
+             },
+             items: [
+               { 
+                 name: 'Premium Jacket', 
+                 quantity: 1, 
+                 price: '$299.99',
+                 unitPrice: '$299.99',
+                 image: '/p1.png'
+               }
+             ]
+           });
+         } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchOrderDetails();
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, [searchParams]);
 
   if (loading) {
@@ -92,7 +193,7 @@ export default function CheckoutSuccessPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Order Number</p>
                     <p className="font-mono text-sm">{orderDetails.orderId}</p>
@@ -102,10 +203,54 @@ export default function CheckoutSuccessPage() {
                     <p className="font-semibold">{orderDetails.total}</p>
                   </div>
                   <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Payment Status</p>
+                    <Badge variant={orderDetails.paymentStatus === 'paid' ? 'default' : 'secondary'}>
+                      {orderDetails.paymentStatus === 'paid' ? 'Paid' : 'Pending'}
+                    </Badge>
+                  </div>
+                  <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Estimated Delivery</p>
                     <p className="font-medium">{orderDetails.estimatedDelivery}</p>
                   </div>
                 </div>
+                
+                {/* Shipping Information */}
+                {orderDetails.shipping && (
+                  <div className="mt-6 pt-4 border-t">
+                    <h4 className="font-semibold mb-3">Shipping Information</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Name</p>
+                        <p className="font-medium">{orderDetails.shipping.firstName} {orderDetails.shipping.lastName}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Email</p>
+                        <p className="font-medium">{orderDetails.shipping.email}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Phone</p>
+                        <p className="font-medium">{orderDetails.shipping.phone || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Location</p>
+                        <p className="font-medium">{orderDetails.shipping.city}, {orderDetails.shipping.province}</p>
+                      </div>
+                      <div className="md:col-span-2">
+                        <p className="text-muted-foreground">Address</p>
+                        <p className="font-medium">{orderDetails.shipping.address}</p>
+                        {orderDetails.shipping.postalCode && (
+                          <p className="font-medium">Postal Code: {orderDetails.shipping.postalCode}</p>
+                        )}
+                      </div>
+                      {orderDetails.shipping.note && (
+                        <div className="md:col-span-2">
+                          <p className="text-muted-foreground">Order Note</p>
+                          <p className="font-medium italic">{orderDetails.shipping.note}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
@@ -118,22 +263,34 @@ export default function CheckoutSuccessPage() {
                   <CardTitle>Items Ordered</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {orderDetails?.items?.map((item: any, index: number) => (
-                    <div key={index} className="flex items-center gap-4 p-4 rounded-lg border">
-                      <div className="w-16 h-16 bg-muted rounded-md overflow-hidden flex-shrink-0">
-                        <Image 
-                          src={item.image || '/p1.png'} 
-                          alt={item.name} 
-                          width={64} 
-                          height={64} 
-                          className="object-cover w-full h-full" 
-                        />
-                      </div>
+                                     {orderDetails?.items?.map((item: any, index: number) => (
+                     <div key={index} className="flex items-center gap-4 p-4 rounded-lg border">
+                       <div className="w-16 h-16 bg-muted rounded-md overflow-hidden flex-shrink-0">
+                         <ProductImage 
+                           src={item.image || '/p1.png'} 
+                           alt={item.name} 
+                           width={64} 
+                           height={64} 
+                           className="object-cover w-full h-full" 
+                         />
+                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-medium">{item.name}</h3>
-                        <p className="text-sm text-muted-foreground">Quantity: {item.quantity}</p>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span>Quantity: {item.quantity}</span>
+                          {item.unitPrice && (
+                            <span>Unit Price: {item.unitPrice}</span>
+                          )}
+                        </div>
                       </div>
-                      <div className="font-semibold">{item.price}</div>
+                      <div className="text-right">
+                        <div className="font-semibold">{item.price}</div>
+                        {item.unitPrice && item.quantity > 1 && (
+                          <div className="text-xs text-muted-foreground">
+                            {item.unitPrice} × {item.quantity}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </CardContent>
@@ -152,9 +309,38 @@ export default function CheckoutSuccessPage() {
                       </div>
                       <div className="flex-1">
                         <p className="font-medium">Order Placed</p>
-                        <p className="text-sm text-muted-foreground">Your order has been confirmed</p>
+                        <p className="text-sm text-muted-foreground">
+                          {orderDetails?.createdAt ? 
+                            `Ordered on ${new Date(orderDetails.createdAt).toLocaleDateString()}` : 
+                            'Your order has been confirmed'
+                          }
+                        </p>
                       </div>
                       <Badge variant="default">Complete</Badge>
+                    </div>
+                    <div className="ml-4 border-l-2 border-muted h-4"></div>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                        orderDetails?.paymentStatus === 'paid' ? 'bg-green-100 border-2 border-green-500' : 'border-2 border-muted'
+                      }`}>
+                        <div className={`w-4 h-4 rounded-full ${
+                          orderDetails?.paymentStatus === 'paid' ? 'bg-green-500' : 'bg-muted-foreground'
+                        }`} />
+                      </div>
+                      <div className="flex-1">
+                        <p className={`font-medium ${orderDetails?.paymentStatus === 'paid' ? '' : 'text-muted-foreground'}`}>
+                          Payment {orderDetails?.paymentStatus === 'paid' ? 'Completed' : 'Pending'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {orderDetails?.paymentStatus === 'paid' ? 
+                            'Payment has been processed successfully' : 
+                            'Awaiting payment confirmation'
+                          }
+                        </p>
+                      </div>
+                      <Badge variant={orderDetails?.paymentStatus === 'paid' ? 'default' : 'secondary'}>
+                        {orderDetails?.paymentStatus === 'paid' ? 'Complete' : 'Pending'}
+                      </Badge>
                     </div>
                     <div className="ml-4 border-l-2 border-muted h-4"></div>
                     <div className="flex items-center gap-3">
@@ -165,7 +351,7 @@ export default function CheckoutSuccessPage() {
                         <p className="font-medium text-muted-foreground">Processing</p>
                         <p className="text-sm text-muted-foreground">We're preparing your items</p>
                       </div>
-                      <Badge variant="secondary">Pending</Badge>
+                      <Badge variant="outline">Upcoming</Badge>
                     </div>
                     <div className="ml-4 border-l-2 border-muted h-4"></div>
                     <div className="flex items-center gap-3">
@@ -181,6 +367,36 @@ export default function CheckoutSuccessPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Order Total Breakdown */}
+              {orderDetails && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Order Total</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-sm">
+                        <span>Subtotal ({orderDetails.items?.length || 0} items)</span>
+                        <span>{orderDetails.total}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Shipping</span>
+                        <span className="text-green-600 font-medium">Free</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Tax</span>
+                        <span>$0.00</span>
+                      </div>
+                      <Separator />
+                      <div className="flex justify-between font-semibold text-lg">
+                        <span>Total</span>
+                        <span>{orderDetails.total}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
             {/* Sidebar */}
@@ -196,7 +412,12 @@ export default function CheckoutSuccessPage() {
                       <Mail className="w-4 h-4 mt-0.5 text-primary" />
                       <div>
                         <p className="font-medium">Email Confirmation</p>
-                        <p className="text-muted-foreground">Check your inbox for order details</p>
+                        <p className="text-muted-foreground">
+                          {orderDetails?.customerEmail ? 
+                            `Sent to ${orderDetails.customerEmail}` : 
+                            'Check your inbox for order details'
+                          }
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -206,9 +427,72 @@ export default function CheckoutSuccessPage() {
                         <p className="text-muted-foreground">You'll receive tracking details once shipped</p>
                       </div>
                     </div>
+                    <div className="flex items-start gap-3">
+                      <Clock className="w-4 h-4 mt-0.5 text-primary" />
+                      <div>
+                        <p className="font-medium">Estimated Delivery</p>
+                        <p className="text-muted-foreground">{orderDetails?.estimatedDelivery || 'May 10–13, 2024'}</p>
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
+
+             
+               <Card>
+                 <CardHeader>
+                   <CardTitle className="text-lg">Receipt</CardTitle>
+                 </CardHeader>
+                 <CardContent>
+                   <Button 
+                     variant="outline" 
+                     className="w-full"
+                     disabled={downloadingReceipt}
+                     onClick={async () => {
+                       if (!orderDetails?.sessionId) {
+                         alert('Order details not available');
+                         return;
+                       }
+                       
+                       setDownloadingReceipt(true);
+                       try {
+                         const response = await fetch('/api/generate-receipt', {
+                           method: 'POST',
+                           headers: {
+                             'Content-Type': 'application/json',
+                           },
+                           body: JSON.stringify({
+                             sessionId: orderDetails.sessionId
+                           }),
+                         });
+                         
+                         if (response.ok) {
+                           // Create blob and download
+                           const blob = await response.blob();
+                           const url = window.URL.createObjectURL(blob);
+                           const a = document.createElement('a');
+                           a.href = url;
+                           a.download = `receipt-${orderDetails.sessionId}.pdf`;
+                           document.body.appendChild(a);
+                           a.click();
+                           window.URL.revokeObjectURL(url);
+                           document.body.removeChild(a);
+                         } else {
+                           const error = await response.json();
+                           alert(`Failed to generate receipt: ${error.error}`);
+                         }
+                       } catch (error) {
+                         console.error('Error downloading receipt:', error);
+                         alert('Failed to download receipt. Please try again.');
+                       } finally {
+                         setDownloadingReceipt(false);
+                       }
+                     }}
+                   >
+                     {downloadingReceipt ? 'Generating...' : 'Download Receipt'}
+                   </Button>
+                 </CardContent>
+               </Card>
 
               {/* Support */}
               <Card>

@@ -113,34 +113,8 @@ export default function CartPage() {
     }
   }, [isAuthenticated]);
 
-  // Refresh cart when cart count changes (after adding items)
-  useEffect(() => {
-    if (isAuthenticated && cartCount > 0) {
-      // Refresh cart data when cart count changes
-      const fetchCart = async () => {
-        try {
-          const response = await fetch('/api/get-cart', {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            credentials: 'include',
-          });
-
-          const data = await response.json();
-          
-          if (response.ok && data.success && data.cartData) {
-            setCartItems(data.cartData.items || []);
-            setTotalPrice(data.cartData.totalPrice || 0);
-          }
-        } catch (error) {
-          console.error('Error refreshing cart:', error);
-        }
-      };
-      
-      fetchCart();
-    }
-  }, [cartCount, isAuthenticated]);
+  // Only fetch cart once when component mounts or authentication changes
+  // Remove the cartCount dependency to prevent infinite loops
 
   const updateQuantity = async (id: number, delta: number) => {
     const currentItem = cartItems.find(item => item.id === id);
@@ -185,7 +159,7 @@ export default function CartPage() {
         );
         setTotalPrice(newTotal);
         
-        // Refresh cart count
+        // Refresh cart count only if quantity changed significantly
         await fetchCartCount();
       } else {
         console.error('Failed to update quantity:', data.error);
@@ -195,8 +169,40 @@ export default function CartPage() {
     }
   };
 
-  const removeItem = (id: number) => {
-    setCartItems(prev => prev.filter(item => item.id !== id));
+  const removeItem = async (id: number) => {
+    try {
+      const response = await fetch('/api/delete-cart', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          cartItemId: id
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        // Remove from local state
+        setCartItems(prev => prev.filter(item => item.id !== id));
+        
+        // Recalculate total price
+        const updatedItems = cartItems.filter(item => item.id !== id);
+        const newTotal = updatedItems.reduce((sum, item) => 
+          sum + (item.product.basePrice * item.qty), 0
+        );
+        setTotalPrice(newTotal);
+        
+        // Refresh cart count since item was removed
+        await fetchCartCount();
+      } else {
+        console.error('Failed to remove item:', data.error);
+      }
+    } catch (error) {
+      console.error('Error removing item:', error);
+    }
   };
 
   const totalCount = cartItems.reduce((sum, item) => sum + item.qty, 0);

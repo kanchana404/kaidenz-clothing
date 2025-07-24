@@ -38,6 +38,29 @@ export async function POST(request: NextRequest) {
       quantity: item.qty,
     }));
 
+    // Get user ID from the session
+    let userId = null;
+    try {
+      const userResponse = await fetch(`${request.headers.get('origin')}/api/userinfo`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cookie': request.headers.get('cookie') || '',
+        },
+        credentials: 'include',
+      });
+      
+      if (userResponse.ok) {
+        const userData = await userResponse.json();
+        if (userData.authenticated && userData.id) {
+          userId = userData.id;
+          console.log('Found user ID for checkout session:', userId);
+        }
+      }
+    } catch (error) {
+      console.error('Error getting user info for checkout session:', error);
+    }
+
     // Create checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -58,6 +81,8 @@ export async function POST(request: NextRequest) {
         note: shippingData.note || '',
         totalAmount: cartData.totalPrice.toString(),
         itemCount: cartData.items.length.toString(),
+        // Add user ID to metadata for webhook processing
+        ...(userId && { userId: userId.toString() }),
       },
       customer_email: shippingData.email,
       shipping_address_collection: {

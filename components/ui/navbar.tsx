@@ -74,12 +74,12 @@ const Navbar = () => {
         fetchCategories();
     }, []);
 
-    // Refresh cart count when authentication changes
+    // Refresh cart count only when authentication changes (not on every render)
     useEffect(() => {
         if (isAuthenticated) {
             fetchCartCount();
         }
-    }, [isAuthenticated, fetchCartCount]);
+    }, [isAuthenticated]); // Remove fetchCartCount from dependencies
 
     // Fetch cart items only when cart sheet is opened
     const handleCartSheetOpen = async (open: boolean) => {
@@ -89,12 +89,8 @@ const Navbar = () => {
         }
     };
 
-    // Refresh cart items when cart count changes (after adding items)
-    useEffect(() => {
-        if (isAuthenticated && cartCount > 0) {
-            fetchCartItems();
-        }
-    }, [cartCount, isAuthenticated]);
+    // Remove the problematic useEffect that was causing infinite loops
+    // Cart items will be fetched only when the cart sheet is opened
 
     return (
         <nav className="relative bg-[#111111] text-[#f6f6f6] shadow-lg">
