@@ -12,17 +12,20 @@ import { Sheet, SheetTrigger, SheetContent } from "@/components/ui/sheet"
 import Link from 'next/link'
 import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Minus, Plus, Trash2, ShoppingCart, User, LogOut } from "lucide-react";
+import { Minus, Plus, Trash2, ShoppingCart, User, LogOut, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from '@/lib/auth-hook';
+import { useCart } from '@/lib/cart-context';
+import { useWishlist } from '@/lib/wishlist-context';
 
 const Navbar = () => {
-    const { isAuthenticated, cartCount, fetchCartCount, refreshCartItems } = useAuth();
+    const { isAuthenticated } = useAuth();
+    const { cartCount, cartItems, cartTotalPrice, fetchCartData } = useCart();
+    const { wishlistCount } = useWishlist();
     const [categories, setCategories] = useState<Array<{id: number, name: string}>>([]);
     const [loading, setLoading] = useState(true);
-    const [cartItems, setCartItems] = useState<any[]>([]);
-    const [cartTotalPrice, setCartTotalPrice] = useState(0);
+    const [cartSheetOpen, setCartSheetOpen] = useState(false);
 
     const navItems = [
         { name: 'Home', href: '/' },
@@ -34,26 +37,6 @@ const Navbar = () => {
     ]
     const [mobileCategoriesOpen, setMobileCategoriesOpen] = useState(false);
     const [open, setOpen] = useState(false); // Sheet open state
-    const [cartSheetOpen, setCartSheetOpen] = useState(false);
-
-    // Fetch cart items for sidebar
-    const fetchCartItems = async () => {
-        if (!isAuthenticated) return;
-        
-        try {
-            const items = await refreshCartItems();
-            if (items) {
-                setCartItems(items);
-                // Calculate total price
-                const total = items.reduce((sum: number, item: any) => {
-                    return sum + (item.product.basePrice * item.qty);
-                }, 0);
-                setCartTotalPrice(total);
-            }
-        } catch (error) {
-            console.error('Error fetching cart items:', error);
-        }
-    };
 
     // Fetch categories from API
     useEffect(() => {
@@ -74,23 +57,13 @@ const Navbar = () => {
         fetchCategories();
     }, []);
 
-    // Refresh cart count only when authentication changes (not on every render)
-    useEffect(() => {
-        if (isAuthenticated) {
-            fetchCartCount();
-        }
-    }, [isAuthenticated]); // Remove fetchCartCount from dependencies
-
     // Fetch cart items only when cart sheet is opened
     const handleCartSheetOpen = async (open: boolean) => {
         setCartSheetOpen(open);
         if (open && isAuthenticated) {
-            await fetchCartItems();
+            await fetchCartData();
         }
     };
-
-    // Remove the problematic useEffect that was causing infinite loops
-    // Cart items will be fetched only when the cart sheet is opened
 
     return (
         <nav className="relative bg-[#111111] text-[#f6f6f6] shadow-lg">
@@ -230,14 +203,29 @@ const Navbar = () => {
                         )}
                     </div>
 
-                    {/* Cart and UserButton for mobile */}
-                    <div className="hidden md:flex items-center ml-4">
+                    {/* Cart and Wishlist buttons for desktop */}
+                    <div className="hidden md:flex items-center ml-4 space-x-2">
+                        {/* Wishlist Button */}
+                        {isAuthenticated && (
+                            <Link href="/wish-list">
+                                <button className="relative p-2 rounded-md hover:bg-[#2f2f2f] transition-colors duration-200" aria-label="View wishlist" title="View wishlist">
+                                    <Heart className="w-6 h-6" />
+                                    {wishlistCount > 0 && (
+                                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">{wishlistCount}</span>
+                                    )}
+                                </button>
+                            </Link>
+                        )}
+
+                        {/* Cart Button */}
                         {isAuthenticated && (
                             <Sheet open={cartSheetOpen} onOpenChange={handleCartSheetOpen}>
                                 <SheetTrigger asChild>
                                     <button className="relative p-2 rounded-md hover:bg-[#2f2f2f] transition-colors duration-200" aria-label="Open cart" title="Open cart">
                                         <ShoppingCart className="w-6 h-6" />
-                                        <span className="absolute -top-2 -right-2 bg-primary text-white text-xs rounded-full px-1.5 py-0.5">{cartCount}</span>
+                                        {cartCount > 0 && (
+                                            <span className="absolute -top-2 -right-2 bg-primary text-white text-xs rounded-full px-1.5 py-0.5">{cartCount}</span>
+                                        )}
                                     </button>
                                 </SheetTrigger>
                                 <SheetContent side="right" className="p-0 bg-[#111111] text-[#f6f6f6] w-full max-w-md flex flex-col">
@@ -403,9 +391,15 @@ const Navbar = () => {
                                               </Link>
                                             </div>
                                         )}
-                                        {/* Cart and UserButton for mobile */}
+                                        {/* Cart and Wishlist for mobile */}
                                         {isAuthenticated && (
                                         <div className="flex items-center justify-center gap-4 mt-4 md:hidden">
+                                          <Link href="/wish-list" className="relative" aria-label="Wishlist" onClick={() => setOpen(false)}>
+                                            <Heart className="w-6 h-6 inline-block" />
+                                            {wishlistCount > 0 && (
+                                              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">{wishlistCount}</span>
+                                            )}
+                                          </Link>
                                           <Link href="/cart" className="relative" aria-label="Cart" onClick={() => setOpen(false)}>
                                             <svg className="w-6 h-6 inline-block" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                                               <circle cx="9" cy="21" r="1" />

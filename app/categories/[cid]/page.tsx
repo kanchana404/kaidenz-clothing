@@ -12,6 +12,7 @@ import { useParams } from 'next/navigation';
 import ColorDots from '@/components/color-dots';
 import Image from 'next/image';
 import { useAuth } from '@/lib/auth-hook';
+import { useCart } from '@/lib/cart-context';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -86,20 +87,20 @@ interface Product {
 
 const allSizes = ['S', 'M', 'L', 'XL', 'XXL'];
 
-const CategoryPage = () => {
-  const { isAuthenticated, addToCart } = useAuth();
-  const params = useParams();
-  const categoryName = params.cid as string;
+export default function CategoryPage({ params }: { params: { cid: string } }) {
+    const { isAuthenticated } = useAuth();
+    const { addToCart } = useCart();
+    const categoryName = params.cid as string;
   
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [price, setPrice] = useState(50);
-  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
-  const [stock, setStock] = useState<{ available: boolean; out: boolean }>({ available: false, out: false });
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+    const [products, setProducts] = useState<Product[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [price, setPrice] = useState(50);
+    const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+    const [stock, setStock] = useState<{ available: boolean; out: boolean }>({ available: false, out: false });
+    const [filterOpen, setFilterOpen] = useState(false);
+    const [search, setSearch] = useState('');
+    const [selectedColors, setSelectedColors] = useState<string[]>([]);
 
   const handleSizeToggle = (size: string) => {
     setSelectedSizes((prev) =>
@@ -122,18 +123,20 @@ const CategoryPage = () => {
     e.stopPropagation();
     
     if (!isAuthenticated) {
-      toast.error("You have to sign in to add products to the cart");
+      toast.error('Please sign in to add items to cart');
       return;
     }
 
-    const loadingToast = toast.loading("Adding to cart...");
-    const result = await addToCart(productId, 1, 1);
-    toast.dismiss(loadingToast);
-    
-    if (result.success) {
-      toast.success(`${productName} added to cart!`);
-    } else {
-      toast.error(result.error || "Failed to add product to cart");
+    try {
+      const result = await addToCart(productId, 1, 1);
+      if (result.success) {
+        toast.success(`${productName} added to cart!`);
+      } else {
+        toast.error(result.error || 'Failed to add to cart');
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast.error('Failed to add to cart');
     }
   };
 
@@ -477,5 +480,3 @@ const CategoryPage = () => {
     </div>
   );
 };
-
-export default CategoryPage;

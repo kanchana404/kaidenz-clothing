@@ -1,7 +1,7 @@
 // app/api/cart/route.js
 import { NextResponse } from 'next/server';
 
-export async function GET(request) {
+export async function GET(request: Request) {
   // Grab cookies from the incoming request
   const cookie = request.headers.get('cookie') || '';
 

@@ -14,6 +14,8 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import Footer from '@/components/ui/footer';
 import { useAuth } from '@/lib/auth-hook';
+import { useCart } from '@/lib/cart-context';
+import { useWishlist } from '@/lib/wishlist-context';
 import { toast } from 'sonner';
 
 // TypeScript interfaces for the product data
@@ -51,11 +53,12 @@ interface Product {
 const ProductPage = () => {
   const params = useParams();
   const productId = params.id;
-  const { isAuthenticated, addToCart } = useAuth();
+  const { isAuthenticated } = useAuth();
+  const { addToCart } = useCart();
+  const { wishlistItems, addToWishlist, removeFromWishlist, isProductInWishlist, getWishlistItemId } = useWishlist();
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
   const [selectedImage, setSelectedImage] = useState(0);
-  const [isWishlisted, setIsWishlisted] = useState(false);
   const [isDescriptionOpen, setIsDescriptionOpen] = useState(true);
   const [isShippingOpen, setIsShippingOpen] = useState(true);
   const [product, setProduct] = useState<Product | null>(null);
@@ -101,6 +104,8 @@ const ProductPage = () => {
 
     fetchProduct();
   }, [productId]);
+
+
 
   // Set default selected image to primary image if available
   useEffect(() => {
@@ -149,27 +154,64 @@ const ProductPage = () => {
 
   const handleAddToCart = async () => {
     if (!isAuthenticated) {
-      toast.error("You have to sign in to add products to the cart");
+      toast.error('Please sign in to add items to cart');
       return;
     }
 
     if (!product) {
-      toast.error("Product data not available");
+      toast.error('Product data not available');
       return;
     }
 
-    // Show loading state and store the toast ID
-    const loadingToast = toast.loading("Adding to cart...");
-    
-    const result = await addToCart(product.id, 1, 1);
-    
-    // Dismiss the loading toast
-    toast.dismiss(loadingToast);
-    
-    if (result.success) {
-      toast.success("Product added to cart!");
-    } else {
-      toast.error(result.error || "Failed to add product to cart");
+    try {
+      const result = await addToCart(product.id, 1, 1);
+      if (result.success) {
+        toast.success('Product added to cart!');
+      } else {
+        toast.error(result.error || 'Failed to add to cart');
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast.error('Failed to add to cart');
+    }
+  };
+
+  const handleToggleWishlist = async () => {
+    if (!isAuthenticated) {
+      toast.error('Please sign in to add items to wishlist');
+      return;
+    }
+
+    if (!product) {
+      toast.error('Product data not available');
+      return;
+    }
+
+    try {
+      // Check if product is already in wishlist using helper function
+      if (isProductInWishlist(product.id)) {
+        // Remove from wishlist
+        const wishlistItemId = getWishlistItemId(product.id);
+        if (wishlistItemId) {
+          const result = await removeFromWishlist(wishlistItemId);
+          if (result.success) {
+            toast.success('Product removed from wishlist!');
+          } else {
+            toast.error(result.error || 'Failed to remove from wishlist');
+          }
+        }
+      } else {
+        // Add to wishlist
+        const result = await addToWishlist(product.id);
+        if (result.success) {
+          toast.success('Product added to wishlist!');
+        } else {
+          toast.error(result.error || 'Failed to add to wishlist');
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling wishlist:', error);
+      toast.error('Failed to toggle wishlist');
     }
   };
 
@@ -375,12 +417,12 @@ const ProductPage = () => {
                 Add to Cart
               </Button>
               <Button
-                onClick={() => setIsWishlisted(!isWishlisted)}
+                onClick={handleToggleWishlist}
                 variant="outline"
                 size="lg"
                 className="w-full sm:w-auto"
               >
-                <Heart className={`h-5 w-5 ${isWishlisted ? 'fill-current' : ''}`} />
+                <Heart className={`h-5 w-5 ${isProductInWishlist(product.id) ? 'fill-current' : ''}`} />
                 <span className="ml-2 sm:hidden">Add to Wishlist</span>
               </Button>
             </div>

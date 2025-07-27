@@ -1,9 +1,11 @@
 "use client"
-import React from 'react';
-import { Plus } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-hook';
+import { useCart } from '@/lib/cart-context';
+import { useWishlist } from '@/lib/wishlist-context';
 import { toast } from 'sonner';
 
 const featuredProducts = [
@@ -46,29 +48,65 @@ const featuredProducts = [
 ];
 
 const HealthyFoodMenu = () => {
-  const { isAuthenticated, addToCart } = useAuth();
+  const { isAuthenticated } = useAuth();
+  const { addToCart } = useCart();
+  const { addToWishlist, removeFromWishlist, isProductInWishlist, getWishlistItemId } = useWishlist();
 
   const handleAddToCart = async (e: React.MouseEvent, productId: number, productName: string) => {
     e.preventDefault();
     e.stopPropagation();
     
     if (!isAuthenticated) {
-      toast.error("You have to sign in to add products to the cart");
+      toast.error('Please sign in to add items to cart');
       return;
     }
 
-    // Show loading state and store the toast ID
-    const loadingToast = toast.loading("Adding to cart...");
+    try {
+      const result = await addToCart(productId, 1, 1); // Default quantity 1, color ID 1
+      if (result.success) {
+        toast.success(`${productName} added to cart!`);
+      } else {
+        toast.error(result.error || 'Failed to add to cart');
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast.error('Failed to add to cart');
+    }
+  };
+
+  const handleAddToWishlist = async (e: React.MouseEvent, productId: number, productName: string) => {
+    e.preventDefault();
+    e.stopPropagation();
     
-    const result = await addToCart(productId, 1, 1); // Default quantity 1, color ID 1
-    
-    // Dismiss the loading toast
-    toast.dismiss(loadingToast);
-    
-    if (result.success) {
-      toast.success(`${productName} added to cart!`);
-    } else {
-      toast.error(result.error || "Failed to add product to cart");
+    if (!isAuthenticated) {
+      toast.error('Please sign in to add items to wishlist');
+      return;
+    }
+
+    try {
+      if (isProductInWishlist(productId)) {
+        // Remove from wishlist
+        const wishlistItemId = getWishlistItemId(productId);
+        if (wishlistItemId) {
+          const result = await removeFromWishlist(wishlistItemId);
+          if (result.success) {
+            toast.success(`${productName} removed from wishlist!`);
+          } else {
+            toast.error(result.error || 'Failed to remove from wishlist');
+          }
+        }
+      } else {
+        // Add to wishlist
+        const result = await addToWishlist(productId);
+        if (result.success) {
+          toast.success(`${productName} added to wishlist!`);
+        } else {
+          toast.error(result.error || 'Failed to add to wishlist');
+        }
+      }
+    } catch (error) {
+      console.error('Error updating wishlist:', error);
+      toast.error('Failed to update wishlist');
     }
   };
 
@@ -94,12 +132,26 @@ const HealthyFoodMenu = () => {
               className="group cursor-pointer bg-card text-card-foreground rounded-2xl border border-gray-200 overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-105"
             >
               {/* Image Container */}
-              <div className="aspect-square bg-gray-50 overflow-hidden">
+              <div className="aspect-square bg-gray-50 overflow-hidden relative">
                 <img 
                   src={item.image} 
                   alt={item.name}
                   className="w-full h-full object-contain p-6 transition-transform duration-300 group-hover:scale-110"
                 />
+                {/* Wishlist Button */}
+                <Button
+                  className={`absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 hover:bg-white flex items-center justify-center p-0 transition-all duration-200 opacity-0 group-hover:opacity-100 shadow-md ${
+                    isProductInWishlist(item.id) ? 'text-red-500' : 'text-gray-600 hover:text-red-500'
+                  }`}
+                  variant="ghost"
+                  aria-label={`${isProductInWishlist(item.id) ? 'Remove' : 'Add'} ${item.name} from wishlist`}
+                  type="button"
+                  tabIndex={-1}
+                  onClick={(e) => handleAddToWishlist(e, item.id, item.name)}
+                >
+                  <Heart size={16} className={isProductInWishlist(item.id) ? 'fill-current' : ''} />
+                  <span className="sr-only">{isProductInWishlist(item.id) ? 'Remove from' : 'Add to'} Wishlist</span>
+                </Button>
               </div>
 
               {/* Content */}

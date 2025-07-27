@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { useAuth } from '@/lib/auth-hook';
+import { useCart } from '@/lib/cart-context';
 
 // Dummy recommended products
 const RECOMMENDED = [
@@ -40,81 +41,20 @@ const RECOMMENDED = [
   },
 ];
 
-interface CartItem {
-  id: number;
-  product: {
-    id: number;
-    name: string;
-    basePrice: number;
-    description: string;
-    imageUrls: string[];
-  };
-  color: {
-    id: number;
-    name: string;
-  };
-  qty: number;
-}
-
 export default function CartPage() {
-  const { isAuthenticated, fetchCartCount, cartCount } = useAuth();
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { isAuthenticated } = useAuth();
+  const { cartItems, cartTotalPrice, isLoading, isUpdating, updateCartItem, removeFromCart } = useCart();
   const [error, setError] = useState<string | null>(null);
-  const [totalPrice, setTotalPrice] = useState(0);
+  const [updatingItems, setUpdatingItems] = useState<Set<number>>(new Set());
 
-  // Fetch cart data from API
+  // Check authentication only - cart data is fetched by the context on mount
   useEffect(() => {
-    const fetchCart = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/get-cart', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-        });
-
-        const data = await response.json();
-        
-        if (response.ok && data.success) {
-          // Use the actual cart items from the API response
-          console.log('Cart data received:', data);
-          if (data.cartData && data.cartData.items) {
-            setCartItems(data.cartData.items);
-            setTotalPrice(data.cartData.totalPrice || 0);
-          } else {
-            setCartItems([]);
-            setTotalPrice(0);
-          }
-          setError(null); // Clear any previous errors
-        } else {
-          if (response.status === 401) {
-            setError('Please sign in to view your cart');
-          } else {
-            setError(data.error || 'Failed to fetch cart');
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching cart:', error);
-        setError('Network error');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    // Only fetch if authenticated, otherwise show sign-in message
-    if (isAuthenticated) {
-      fetchCart();
-    } else {
-      setLoading(false);
+    if (!isAuthenticated) {
       setError('Please sign in to view your cart');
+    } else {
+      setError(null);
     }
   }, [isAuthenticated]);
-
-  // Only fetch cart once when component mounts or authentication changes
-  // Remove the cartCount dependency to prevent infinite loops
 
   const updateQuantity = async (id: number, delta: number) => {
     const currentItem = cartItems.find(item => item.id === id);
@@ -127,81 +67,44 @@ export default function CartPage() {
       return;
     }
 
-    try {
-      const response = await fetch('/api/update-cart', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          cartItemId: id,
-          quantity: newQuantity
-        }),
-      });
+    // Add item to updating set
+    setUpdatingItems(prev => new Set(prev).add(id));
 
-      const data = await response.json();
-      
-      if (response.ok && data.success) {
-        // Update local state immediately for better UX
-        setCartItems(prevItems => 
-          prevItems.map(item => 
-            item.id === id ? { ...item, qty: newQuantity } : item
-          )
-        );
-        
-        // Recalculate total price
-        const updatedItems = cartItems.map(item => 
-          item.id === id ? { ...item, qty: newQuantity } : item
-        );
-        const newTotal = updatedItems.reduce((sum, item) => 
-          sum + (item.product.basePrice * item.qty), 0
-        );
-        setTotalPrice(newTotal);
-        
-        // Refresh cart count only if quantity changed significantly
-        await fetchCartCount();
-      } else {
-        console.error('Failed to update quantity:', data.error);
+    try {
+      const result = await updateCartItem(id, newQuantity);
+      if (!result.success) {
+        console.error('Failed to update quantity:', result.error);
       }
     } catch (error) {
       console.error('Error updating quantity:', error);
+    } finally {
+      // Remove item from updating set
+      setUpdatingItems(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
     }
   };
 
   const removeItem = async (id: number) => {
-    try {
-      const response = await fetch('/api/delete-cart', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          cartItemId: id
-        }),
-      });
+    // Add item to updating set
+    setUpdatingItems(prev => new Set(prev).add(id));
 
-      const data = await response.json();
-      
-      if (response.ok && data.success) {
-        // Remove from local state
-        setCartItems(prev => prev.filter(item => item.id !== id));
-        
-        // Recalculate total price
-        const updatedItems = cartItems.filter(item => item.id !== id);
-        const newTotal = updatedItems.reduce((sum, item) => 
-          sum + (item.product.basePrice * item.qty), 0
-        );
-        setTotalPrice(newTotal);
-        
-        // Refresh cart count since item was removed
-        await fetchCartCount();
-      } else {
-        console.error('Failed to remove item:', data.error);
+    try {
+      const result = await removeFromCart(id);
+      if (!result.success) {
+        console.error('Failed to remove item:', result.error);
       }
     } catch (error) {
       console.error('Error removing item:', error);
+    } finally {
+      // Remove item from updating set
+      setUpdatingItems(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
     }
   };
 
@@ -220,8 +123,9 @@ export default function CartPage() {
           )}
         </div>
 
-        {loading ? (
+        {isLoading ? (
           <div className="text-center py-24">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-muted-foreground text-lg font-light">Loading your cart...</p>
           </div>
         ) : error ? (
@@ -251,69 +155,84 @@ export default function CartPage() {
             {/* Cart Items */}
             <div className="lg:col-span-2">
               <div className="space-y-8">
-                {cartItems.map((item, index) => (
-                  <div key={item.id}>
-                    <div className="flex gap-6 py-6">
-                      {/* Product Image */}
-                      <div className="w-40 h-40 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
-                        <Image 
-                          src={item.product.imageUrls && item.product.imageUrls.length > 0 ? item.product.imageUrls[0] : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQ0IiBoZWlnaHQ9IjE0NCIgdmlld0JveD0iMCAwIDE0NCAxNDQiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxNDQiIGhlaWdodD0iMTQ0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik03MiAzNkM2MS45NTQzIDM2IDU0IDQzLjk1NDMgNTQgNTRDNTQgNjQuMDQ1NyA2MS45NTQzIDcyIDcyQzgxLjA0NTcgNzIgODkgNjQuMDQ1NyA4OSA1NEM4OSA0My45NTQzIDgxLjA0NTcgMzYgNzIgMzZaIiBmaWxsPSIjOTRBM0E2Ii8+CjxwYXRoIGQ9Ik0zNiAxMDhDMzYgOTcuOTU0MyA0My45NTQzIDkwIDU0IDkwSDkwQzEwMC4wNDYgOTAgMTA4IDk3Ljk1NDMgMTA4IDEwOFYxMjBIMzZWMTA4WiIgZmlsbD0iIzk0QTNBNiIvPgo8L3N2Zz4K'}
-                          alt={item.product.name} 
-                          width={144} 
-                          height={144} 
-                          className="object-contain w-36 h-36 bg-white rounded-md"
-                        />
-                      </div>
-
-                      {/* Product Details */}
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-lg">{item.product.name}</h3>
-                        <div className="text-sm text-muted-foreground mt-1 space-y-1">
-                          {item.product.description.split('\n').map((line, i) => (
-                            <div key={i}>{line}</div>
-                          ))}
+                {cartItems.map((item, index) => {
+                  const isItemUpdating = updatingItems.has(item.id);
+                  return (
+                    <div key={item.id} className={`transition-opacity duration-200 ${isItemUpdating ? 'opacity-50' : 'opacity-100'}`}>
+                      <div className="flex gap-6 py-6">
+                        {/* Product Image */}
+                        <div className="w-40 h-40 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                          <Image 
+                            src={item.product.imageUrls && item.product.imageUrls.length > 0 ? item.product.imageUrls[0] : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQ0IiBoZWlnaHQ9IjE0NCIgdmlld0JveD0iMCAwIDE0NCAxNDQiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxNDQiIGhlaWdodD0iMTQ0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik03MiAzNkM2MS45NTQzIDM2IDU0IDQzLjk1NDMgNTQgNTRDNTQgNjQuMDQ1NyA2MS45NTQzIDcyIDcyQzgxLjA0NTcgNzIgODkgNjQuMDQ1NyA4OSA1NEM4OSA0My45NTQzIDgxLjA0NTcgMzYgNzIgMzZaIiBmaWxsPSIjOTRBM0E2Ii8+CjxwYXRoIGQ9Ik0zNiAxMDhDMzYgOTcuOTU0MyA0My45NTQzIDkwIDU0IDkwSDkwQzEwMC4wNDYgOTAgMTA4IDk3Ljk1NDMgMTA4IDEwOFYxMjBIMzZWMTA4WiIgZmlsbD0iIzk0QTNBNiIvPgo8L3N2Zz4K'}
+                            alt={item.product.name} 
+                            width={144} 
+                            height={144} 
+                            className="object-contain w-36 h-36 bg-white rounded-md"
+                          />
                         </div>
-                        
-                        {/* Quantity Controls */}
-                        <div className="flex items-center gap-3 mt-4">
+
+                        {/* Product Details */}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-lg">{item.product.name}</h3>
+                          <div className="text-sm text-muted-foreground mt-1 space-y-1">
+                            <div>Color: {item.color.name}</div>
+                          </div>
+                          
+                          {/* Quantity Controls */}
+                          <div className="flex items-center gap-3 mt-4">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="w-8 h-8 rounded-full border-muted-foreground/20 hover:border-muted-foreground/40"
+                              onClick={() => updateQuantity(item.id, -1)}
+                              disabled={isItemUpdating}
+                            >
+                              <Minus className="w-3 h-3" />
+                            </Button>
+                            <span className="w-8 text-center font-medium">
+                              {isItemUpdating ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mx-auto"></div>
+                              ) : (
+                                item.qty
+                              )}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="w-8 h-8 rounded-full border-muted-foreground/20 hover:border-muted-foreground/40"
+                              onClick={() => updateQuantity(item.id, 1)}
+                              disabled={isItemUpdating}
+                            >
+                              <Plus className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Price and Remove */}
+                        <div className="flex flex-col items-end justify-between">
+                          <div className="text-right">
+                            <p className="text-lg font-semibold">${(item.product.basePrice * item.qty).toFixed(2)}</p>
+                            <p className="text-sm text-muted-foreground">${item.product.basePrice.toFixed(2)} each</p>
+                          </div>
                           <Button
                             variant="outline"
                             size="icon"
                             className="w-8 h-8 rounded-full border-muted-foreground/20 hover:border-muted-foreground/40"
-                            onClick={() => updateQuantity(item.id, -1)}
+                            onClick={() => removeItem(item.id)}
+                            disabled={isItemUpdating}
                           >
-                            <Minus className="w-3 h-3" />
-                          </Button>
-                          <span className="w-8 text-center font-medium">{item.qty}</span>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="w-8 h-8 rounded-full border-muted-foreground/20 hover:border-muted-foreground/40"
-                            onClick={() => updateQuantity(item.id, 1)}
-                          >
-                            <Plus className="w-3 h-3" />
+                            {isItemUpdating ? (
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary"></div>
+                            ) : (
+                              <Trash2 className="w-3 h-3" />
+                            )}
                           </Button>
                         </div>
                       </div>
-
-                      {/* Price and Remove */}
-                      <div className="flex flex-col items-end justify-between">
-                        <button
-                          onClick={() => removeItem(item.id)}
-                          className="text-muted-foreground hover:text-destructive transition-colors p-1"
-                          aria-label={`Remove ${item.product.name} from cart`}
-                          title={`Remove ${item.product.name} from cart`}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                        <div className="font-medium text-lg">
-                          ${(item.product.basePrice * item.qty).toFixed(2)}
-                        </div>
-                      </div>
+                      {index < cartItems.length - 1 && <Separator />}
                     </div>
-                    {index < cartItems.length - 1 && <Separator className="opacity-30" />}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -326,7 +245,13 @@ export default function CartPage() {
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Subtotal</span>
-                      <span>${totalPrice.toFixed(2)}</span>
+                      <span className={isUpdating ? 'opacity-50' : ''}>
+                        {isUpdating ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary inline-block"></div>
+                        ) : (
+                          `$${cartTotalPrice.toFixed(2)}`
+                        )}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Shipping</span>
@@ -342,12 +267,28 @@ export default function CartPage() {
                   
                   <div className="flex justify-between font-medium text-lg">
                     <span>Total</span>
-                    <span>${totalPrice.toFixed(2)}</span>
+                    <span className={isUpdating ? 'opacity-50' : ''}>
+                      {isUpdating ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary inline-block"></div>
+                      ) : (
+                        `$${cartTotalPrice.toFixed(2)}`
+                      )}
+                    </span>
                   </div>
                   
                   <Link href="/checkout" className="block w-full mt-6">
-                    <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 py-3 font-medium rounded-lg">
-                      Checkout
+                    <Button 
+                      className="w-full bg-primary text-primary-foreground hover:bg-primary/90 py-3 font-medium rounded-lg"
+                      disabled={isUpdating || cartItems.length === 0}
+                    >
+                      {isUpdating ? (
+                        <div className="flex items-center gap-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Updating...
+                        </div>
+                      ) : (
+                        'Checkout'
+                      )}
                     </Button>
                   </Link>
                 </div>

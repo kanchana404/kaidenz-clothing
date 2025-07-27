@@ -4,6 +4,8 @@ import "./globals.css";
 import React from "react";
 import NavbarWrapper from "@/components/navbar-wrapper";
 import { Toaster } from "@/components/ui/sonner";
+import { CartProvider } from "@/lib/cart-context";
+import { WishlistProvider } from "@/lib/wishlist-context";
 
 
 const geistSans = Geist({
@@ -30,9 +32,13 @@ export default function RootLayout({
    
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <NavbarWrapper />
-        {children}
-        <Toaster />
+        <CartProvider>
+          <WishlistProvider>
+            <NavbarWrapper />
+            {children}
+            <Toaster />
+          </WishlistProvider>
+        </CartProvider>
       </body>
     </html>
    

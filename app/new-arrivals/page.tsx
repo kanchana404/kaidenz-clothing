@@ -13,6 +13,7 @@ import Link from 'next/link'
 import Footer from '@/components/ui/footer'
 import ColorDots from '@/components/color-dots'
 import { useAuth } from '@/lib/auth-hook';
+import { useCart } from '@/lib/cart-context';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -179,7 +180,8 @@ interface Product {
 }
 
 const ProductList = () => {
-  const { isAuthenticated, addToCart } = useAuth();
+  const { isAuthenticated } = useAuth();
+  const { addToCart } = useCart();
   const [products, setProducts] = React.useState<Product[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -213,18 +215,20 @@ const ProductList = () => {
     e.stopPropagation();
     
     if (!isAuthenticated) {
-      toast.error("You have to sign in to add products to the cart");
+      toast.error('Please sign in to add items to cart');
       return;
     }
 
-    const loadingToast = toast.loading("Adding to cart...");
-    const result = await addToCart(productId, 1, 1);
-    toast.dismiss(loadingToast);
-    
-    if (result.success) {
-      toast.success(`${productName} added to cart!`);
-    } else {
-      toast.error(result.error || "Failed to add product to cart");
+    try {
+      const result = await addToCart(productId, 1, 1);
+      if (result.success) {
+        toast.success(`${productName} added to cart!`);
+      } else {
+        toast.error(result.error || 'Failed to add to cart');
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast.error('Failed to add to cart');
     }
   };
 
