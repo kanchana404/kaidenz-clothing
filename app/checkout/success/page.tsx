@@ -1,5 +1,5 @@
 "use client"
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CheckCircle, Package, Truck, Home, ShoppingBag, Clock, Mail, Phone, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -41,7 +41,8 @@ const ProductImage = ({ src, alt, width, height, className }: {
   );
 };
 
-export default function CheckoutSuccessPage() {
+// Component that uses useSearchParams
+function CheckoutSuccessContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [orderDetails, setOrderDetails] = useState<any>(null);
@@ -539,5 +540,26 @@ export default function CheckoutSuccessPage() {
       
       <Footer />
     </div>
+  );
+}
+
+// Loading component for Suspense fallback
+function CheckoutSuccessLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center space-y-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+        <p className="text-muted-foreground">Loading order details...</p>
+      </div>
+    </div>
+  );
+}
+
+// Main component with Suspense boundary
+export default function CheckoutSuccessPage() {
+  return (
+    <Suspense fallback={<CheckoutSuccessLoading />}>
+      <CheckoutSuccessContent />
+    </Suspense>
   );
 }
