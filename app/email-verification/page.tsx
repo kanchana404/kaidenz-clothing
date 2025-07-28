@@ -7,12 +7,16 @@ import { Input } from '@/components/ui/input'
 import React, { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
+import { useCart } from '@/lib/cart-context'
+import { useWishlist } from '@/lib/wishlist-context'
 
 export default function EmailVerificationPage() {
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const inputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
   const router = useRouter();
+  const { fetchCartData } = useCart()
+  const { fetchWishlistData } = useWishlist()
 
   function handleInputChange(index: number, value: string) {
     if (!/^[0-9]?$/.test(value)) return;
@@ -63,6 +67,19 @@ export default function EmailVerificationPage() {
       });
       const data = await res.json();
       if (res.ok && data.status) {
+        // Initialize cart and wishlist data for the verified user
+        try {
+          console.log("Initializing cart and wishlist for verified user...");
+          await Promise.all([
+            fetchCartData(),
+            fetchWishlistData()
+          ]);
+          console.log("Cart and wishlist initialized successfully");
+        } catch (error) {
+          console.error("Error initializing cart/wishlist:", error);
+          // Don't fail the verification if cart/wishlist initialization fails
+        }
+        
         toast.success("Email verified successfully!");
         router.push("/");
       } else {

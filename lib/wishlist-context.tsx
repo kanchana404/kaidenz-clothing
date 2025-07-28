@@ -27,6 +27,7 @@ interface WishlistContextType {
   removeFromWishlist: (wishlistItemId: number) => Promise<{ success: boolean; error?: string }>;
   isProductInWishlist: (productId: number) => boolean;
   getWishlistItemId: (productId: number) => number | null;
+  clearWishlistData: () => void;
 }
 
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
@@ -149,6 +150,12 @@ export const WishlistProvider: React.FC<WishlistProviderProps> = ({ children }) 
     return item ? item.id : null;
   }, [wishlistItems]);
 
+  const clearWishlistData = useCallback(() => {
+    setWishlistItems([]);
+    setWishlistCount(0);
+    console.log('WishlistContext: Cleared wishlist data.');
+  }, []);
+
   // Load wishlist data on mount
   useEffect(() => {
     console.log('WishlistContext: useEffect triggered, calling fetchWishlistData');
@@ -164,6 +171,7 @@ export const WishlistProvider: React.FC<WishlistProviderProps> = ({ children }) 
     removeFromWishlist,
     isProductInWishlist,
     getWishlistItemId,
+    clearWishlistData,
   };
 
   return (

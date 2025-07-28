@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { useAuth } from '@/lib/auth-hook';
 import { useCart } from '@/lib/cart-context';
+import { toast } from "sonner";
 
 // Dummy recommended products
 const RECOMMENDED = [
@@ -74,9 +75,16 @@ export default function CartPage() {
       const result = await updateCartItem(id, newQuantity);
       if (!result.success) {
         console.error('Failed to update quantity:', result.error);
+        // Show toast message for stock limit error
+        if (result.error && result.error.includes("Only") && result.error.includes("item(s) left in stock")) {
+          toast.error(result.error);
+        } else {
+          toast.error(result.error || 'Failed to update quantity');
+        }
       }
     } catch (error) {
       console.error('Error updating quantity:', error);
+      toast.error('Failed to update quantity');
     } finally {
       // Remove item from updating set
       setUpdatingItems(prev => {

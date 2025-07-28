@@ -21,8 +21,8 @@ import { useWishlist } from '@/lib/wishlist-context';
 
 const Navbar = () => {
     const { isAuthenticated } = useAuth();
-    const { cartCount, cartItems, cartTotalPrice, fetchCartData } = useCart();
-    const { wishlistCount } = useWishlist();
+    const { cartCount, cartItems, cartTotalPrice, fetchCartData, removeFromCart, updateCartItem, clearCartData } = useCart();
+    const { wishlistCount, clearWishlistData } = useWishlist();
     const [categories, setCategories] = useState<Array<{id: number, name: string}>>([]);
     const [loading, setLoading] = useState(true);
     const [cartSheetOpen, setCartSheetOpen] = useState(false);
@@ -178,6 +178,10 @@ const Navbar = () => {
                                                 const data = await response.json();
                                                 console.log('Sign out result:', data);
                                                 if (data.success) {
+                                                    // Clear cart and wishlist data on signout
+                                                    clearCartData();
+                                                    clearWishlistData();
+                                                    console.log('Cart and wishlist data cleared on signout');
                                                     // Refresh the page to update navbar state
                                                     window.location.reload();
                                                 }

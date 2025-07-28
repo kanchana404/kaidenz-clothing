@@ -12,11 +12,29 @@ import { toast } from 'sonner';
 import Footer from '@/components/ui/footer';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
+// Product skeleton for loading state
+const ProductSkeleton = () => (
+  <div className="rounded-3xl border border-neutral-100 overflow-hidden animate-pulse">
+    <div className="aspect-square bg-neutral-100"></div>
+    <div className="p-6">
+      <div className="h-4 bg-neutral-100 rounded mb-2"></div>
+      <div className="h-3 bg-neutral-100 rounded mb-4"></div>
+      <div className="h-3 bg-neutral-100 rounded mb-3"></div>
+      <div className="flex justify-between items-center">
+        <div className="h-6 bg-neutral-100 rounded w-16"></div>
+        <div className="w-9 h-9 rounded-full bg-neutral-100"></div>
+      </div>
+    </div>
+  </div>
+);
 
 export default function WishlistPage() {
   const { isAuthenticated } = useAuth();
   const { addToCart } = useCart();
   const { wishlistItems, removeFromWishlist, isLoading, fetchWishlistData } = useWishlist();
+  const router = useRouter();
 
   // Fetch wishlist data when component mounts and user is authenticated
   useEffect(() => {
@@ -37,7 +55,10 @@ export default function WishlistPage() {
     }
   };
 
-  const handleAddToCart = async (productId: number, productName: string) => {
+  const handleAddToCart = async (e: React.MouseEvent, productId: number, productName: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     if (!isAuthenticated) {
       toast.error('Please sign in to add items to cart');
       return;
@@ -54,6 +75,10 @@ export default function WishlistPage() {
       console.error('Error adding to cart:', error);
       toast.error('Failed to add to cart');
     }
+  };
+
+  const handleViewProduct = (productId: number) => {
+    router.push(`/product/${productId}`);
   };
 
   const totalValue = wishlistItems.reduce((sum, item) => sum + item.product.basePrice, 0);
@@ -112,83 +137,133 @@ export default function WishlistPage() {
 
         {/* Loading State */}
         {isLoading ? (
-          <div className="text-center py-24">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ffcb74] mx-auto mb-4"></div>
-            <p className="text-gray-600 text-lg font-light">Loading your wishlist...</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <ProductSkeleton key={index} />
+            ))}
           </div>
         ) : (
           <>
             {/* Wishlist Grid */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {wishlistItems.map((item) => (
-                <Card key={item.id} className="group border border-gray-200 bg-white hover:border-[#ffcb74]/30 transition-all duration-300 hover:shadow-xl">
-                  <CardContent className="p-0">
-                    <div className="relative overflow-hidden">
-                      <Image
-                        src={item.product.imageUrls && item.product.imageUrls.length > 0 ? item.product.imageUrls[0] : '/p1.png'}
-                        alt={item.product.name}
-                        width={400}
-                        height={300}
-                        className="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                      <button
-                        onClick={() => removeItem(item.id)}
-                        className="absolute top-4 right-4 w-8 h-8 bg-white/90 hover:bg-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-md"
-                        aria-label={`Remove ${item.product.name} from wishlist`}
-                        title={`Remove ${item.product.name} from wishlist`}
-                      >
-                        <X className="w-4 h-4 text-gray-600" />
-                      </button>
-                    </div>
-
-                    <div className="p-6">
-                      <div className="flex items-start justify-between mb-3">
-                        <h3 className="font-medium text-gray-900 leading-tight">{item.product.name}</h3>
-                        <span className="text-lg font-semibold text-[#ffcb74] ml-2">${item.product.basePrice.toFixed(2)}</span>
-                      </div>
-
-                      <p className="text-sm text-gray-600 mb-3">KAIDENZ Store</p>
-
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 gap-2 border-gray-200 text-gray-700 hover:bg-gray-50"
-                        >
-                          <Eye className="w-4 h-4" />
-                          View
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-2 border-[#ffcb74] text-[#ffcb74] hover:bg-[#ffcb74]/10"
-                          onClick={() => handleAddToCart(item.product.id, item.product.name)}
-                        >
-                          <ShoppingCart className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            {/* Empty State */}
-            {wishlistItems.length === 0 && (
-              <div className="text-center py-16">
-                <div className="w-24 h-24 bg-[#ffcb74]/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Heart className="w-12 h-12 text-[#ffcb74]" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {wishlistItems.length === 0 ? (
+                <div className="col-span-full text-center py-16">
+                  <div className="w-24 h-24 bg-[#ffcb74]/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Heart className="w-12 h-12 text-[#ffcb74]" />
+                  </div>
+                  <h3 className="text-xl font-medium text-gray-900 mb-2">Your wishlist is empty</h3>
+                  <p className="text-gray-600 mb-8">Start browsing products and add them to your wishlist</p>
+                  <Link href="/">
+                    <Button className="gap-2 bg-[#ffcb74] hover:bg-[#ffcb74]/90 text-white font-medium">
+                      <Plus className="w-4 h-4" />
+                      Browse Products
+                    </Button>
+                  </Link>
                 </div>
-                <h3 className="text-xl font-medium text-gray-900 mb-2">Your wishlist is empty</h3>
-                <p className="text-gray-600 mb-8">Start browsing products and add them to your wishlist</p>
-                <Link href="/">
-                  <Button className="gap-2 bg-[#ffcb74] hover:bg-[#ffcb74]/90 text-white font-medium">
-                    <Plus className="w-4 h-4" />
-                    Browse Products
-                  </Button>
-                </Link>
-              </div>
-            )}
+              ) : (
+                wishlistItems.map((item) => (
+                  <div key={item.id} className="group rounded-3xl border border-neutral-100 overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-neutral-200 relative">
+                    {/* Remove from Wishlist Button */}
+                    <button
+                      onClick={() => removeItem(item.id)}
+                      className="absolute top-3 right-3 z-30 w-8 h-8 bg-white/90 hover:bg-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-md"
+                      aria-label={`Remove ${item.product.name} from wishlist`}
+                      title={`Remove ${item.product.name} from wishlist`}
+                    >
+                      <X className="w-4 h-4 text-gray-600" />
+                    </button>
+
+                    {/* Product Image */}
+                    <div className="aspect-square overflow-hidden relative">
+                      {item.product.imageUrls && item.product.imageUrls.length > 1 ? (
+                        <>
+                          {/* Image count indicator */}
+                          <div className="absolute top-3 left-3 z-10 bg-white/90 backdrop-blur-sm text-neutral-700 text-xs px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            {item.product.imageUrls.length} photos
+                          </div>
+                          {/* Main image */}
+                          <Image
+                            src={item.product.imageUrls[0]}
+                            alt={item.product.name}
+                            width={400}
+                            height={400}
+                            className="w-full h-full object-contain p-6 transition-all duration-500 group-hover:opacity-0"
+                          />
+                          {/* Hover carousel */}
+                          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 modern-carousel">
+                            {item.product.imageUrls.map((imageUrl: string, index: number) => (
+                              <Image
+                                key={index}
+                                src={imageUrl}
+                                alt={`${item.product.name} - Image ${index + 1}`}
+                                width={400}
+                                height={400}
+                                className="absolute inset-0 w-full h-full object-contain p-6"
+                              />
+                            ))}
+                          </div>
+                        </>
+                      ) : (
+                        <Image
+                          src={item.product.imageUrls?.[0] || '/p1.png'}
+                          alt={item.product.name}
+                          width={400}
+                          height={400}
+                          className="w-full h-full object-contain p-6 transition-transform duration-300 group-hover:scale-105"
+                        />
+                      )}
+                    </div>
+
+                    {/* Product Info */}
+                    <div className="p-6">
+                      <div className="mb-4">
+                        <h3 className="font-medium text-neutral-900 mb-2 text-lg leading-tight">
+                          {item.product.name}
+                        </h3>
+                        <p className="text-sm text-neutral-500 line-clamp-2 leading-relaxed">
+                          {item.product.description || 'Product description not available'}
+                        </p>
+                        
+                        {/* Stock Status */}
+                        <div className="mt-3">
+                          <Badge variant="outline" className="text-xs border-green-200 text-green-700">
+                            In Wishlist
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {/* Price and Actions */}
+                      <div className="flex justify-between items-center">
+                        <span className="text-xl font-semibold text-neutral-900">
+                          ${item.product.basePrice.toFixed(2)}
+                        </span>
+                        <div className="flex gap-2">
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="w-9 h-9 rounded-full border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleViewProduct(item.product.id);
+                            }}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            className="w-9 h-9 rounded-full bg-neutral-900 hover:bg-neutral-800 text-white transition-all duration-200"
+                            onClick={(e) => handleAddToCart(e, item.product.id, item.product.name)}
+                          >
+                            <span className="text-lg font-light">+</span>
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </>
         )}
 

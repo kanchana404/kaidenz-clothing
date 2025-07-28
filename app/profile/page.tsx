@@ -31,6 +31,9 @@ import {
   Shield,
   Camera
 } from 'lucide-react';
+import { useAuth } from '@/lib/auth-hook';
+import { useCart } from '@/lib/cart-context';
+import { useWishlist } from '@/lib/wishlist-context';
 
 interface UserData {
   id: string;
@@ -75,6 +78,8 @@ export default function ProfilePage() {
   const [locationDataLoading, setLocationDataLoading] = useState(true);
   const [addressData, setAddressData] = useState<AddressData | null>(null);
   const hasInitialized = useRef(false);
+  const { clearCartData } = useCart();
+  const { clearWishlistData } = useWishlist();
 
   // Function to set provinces and cities from userinfo response
   const setLocationDataFromUserInfo = (userInfoData: UserData) => {
@@ -362,6 +367,10 @@ export default function ProfilePage() {
       const data = await response.json();
       console.log('Profile sign out result:', data);
       if (data.success) {
+        // Clear cart and wishlist data on signout
+        clearCartData();
+        clearWishlistData();
+        console.log('Cart and wishlist data cleared on signout from profile page');
         console.log('Successfully signed out from profile page');
         router.push('/');
       }

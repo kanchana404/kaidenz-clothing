@@ -28,6 +28,7 @@ interface CartContextType {
   updateCartItem: (itemId: number, quantity: number) => Promise<{ success: boolean; error?: string }>;
   removeFromCart: (itemId: number) => Promise<{ success: boolean; error?: string }>;
   clearCart: () => Promise<{ success: boolean; error?: string }>;
+  clearCartData: () => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -158,7 +159,10 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       } else {
         // Revert optimistic update on failure
         await fetchCartData();
-        return { success: false, error: data.error || 'Failed to update cart' };
+        return { 
+          success: false, 
+          error: data.error || 'Failed to update cart' 
+        };
       }
     } catch (error) {
       console.error('Error updating cart:', error);
@@ -242,6 +246,12 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     }
   }, []);
 
+  const clearCartData = useCallback(() => {
+    setCartItems([]);
+    setCartCount(0);
+    setCartTotalPrice(0);
+  }, []);
+
   // Check authentication and fetch cart data on mount only
   useEffect(() => {
     const checkAuthAndFetchCart = async () => {
@@ -285,6 +295,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     updateCartItem,
     removeFromCart,
     clearCart,
+    clearCartData,
   };
 
   return (

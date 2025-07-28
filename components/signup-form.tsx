@@ -13,13 +13,16 @@ import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import { useState } from "react"
 import { toast } from "sonner"
+import { useCart } from "@/lib/cart-context"
+import { useWishlist } from "@/lib/wishlist-context"
 
 export function SignupForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
   const [loading, setLoading] = useState(false)
-  // For redirect
+  const { fetchCartData } = useCart()
+  const { fetchWishlistData } = useWishlist()
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -52,6 +55,20 @@ export function SignupForm({
             ...user,
             user_id: data.user_id || ''
           }))
+          
+          // Initialize cart and wishlist data for the new user
+          try {
+            console.log("Initializing cart and wishlist for new user...");
+            await Promise.all([
+              fetchCartData(),
+              fetchWishlistData()
+            ]);
+            console.log("Cart and wishlist initialized successfully");
+          } catch (error) {
+            console.error("Error initializing cart/wishlist:", error);
+            // Don't fail the signup if cart/wishlist initialization fails
+          }
+          
           toast.success("Signup successful! Please verify your email.");
           window.location.href = "/email-verification";
         } else {

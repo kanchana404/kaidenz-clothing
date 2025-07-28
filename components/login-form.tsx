@@ -14,6 +14,8 @@ import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useCart } from "@/lib/cart-context"
+import { useWishlist } from "@/lib/wishlist-context"
 
 export function LoginForm({
   className,
@@ -24,6 +26,8 @@ export function LoginForm({
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
+  const { fetchCartData } = useCart()
+  const { fetchWishlistData } = useWishlist()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,6 +48,20 @@ export function LoginForm({
       if (response.ok && data.status) {
         // Successful login
         console.log("Login successful:", data)
+        
+        // Initialize cart and wishlist data for the logged-in user
+        try {
+          console.log("Initializing cart and wishlist for logged-in user...");
+          await Promise.all([
+            fetchCartData(),
+            fetchWishlistData()
+          ]);
+          console.log("Cart and wishlist initialized successfully");
+        } catch (error) {
+          console.error("Error initializing cart/wishlist:", error);
+          // Don't fail the login if cart/wishlist initialization fails
+        }
+        
         router.push("/") // Redirect to home page
       } else {
         // Login failed

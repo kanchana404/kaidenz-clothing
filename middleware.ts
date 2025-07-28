@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // Define protected routes that require authentication
-const protectedRoutes = ['/cart', '/checkout', '/profile'];
+const protectedRoutes = ['/cart', '/checkout', '/profile', '/wish-list'];
 const authRoutes = ['/login', '/sign-in', '/sign-up', '/email-verification'];
 
 export function middleware(request: NextRequest) {
