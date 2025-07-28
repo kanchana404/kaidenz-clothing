@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -34,6 +35,7 @@ import {
 import { useAuth } from '@/lib/auth-hook';
 import { useCart } from '@/lib/cart-context';
 import { useWishlist } from '@/lib/wishlist-context';
+import { toast } from 'sonner';
 
 interface UserData {
   id: string;
@@ -53,6 +55,22 @@ interface UserData {
   authenticated?: boolean;
   provinces?: Array<{ id: string; name: string }>;
   cities?: Array<{ id: string; name: string; province_id?: string }>;
+}
+
+interface OrderItem {
+  productId: number;
+  productName: string;
+  qty: number;
+  price: number;
+  total: number;
+}
+
+interface Order {
+  orderId: string;
+  status: string;
+  date: string;
+  total: number;
+  items: OrderItem[];
 }
 
 export default function ProfilePage() {
@@ -77,9 +95,17 @@ export default function ProfilePage() {
   const [openCity, setOpenCity] = useState(false);
   const [locationDataLoading, setLocationDataLoading] = useState(true);
   const [addressData, setAddressData] = useState<AddressData | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
   const hasInitialized = useRef(false);
-  const { clearCartData } = useCart();
-  const { clearWishlistData } = useWishlist();
+  const { clearCartData, cartCount } = useCart();
+  const { clearWishlistData, wishlistCount } = useWishlist();
 
   // Function to set provinces and cities from userinfo response
   const setLocationDataFromUserInfo = (userInfoData: UserData) => {
@@ -136,6 +162,96 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error('Error fetching address data:', error);
+    }
+  };
+
+  // Function to fetch user orders
+  const fetchUserOrders = async () => {
+    try {
+      console.log('Fetching user orders...');
+      setOrdersLoading(true);
+      const response = await fetch('/api/get-user-orders');
+      
+      console.log('Orders API response status:', response.status);
+      const data = await response.json();
+      console.log('Orders data response:', data);
+      
+      if (response.ok && data.status === true) {
+        setOrders(data.orders || []);
+        console.log('Orders loaded successfully:', data.orders);
+        
+        // Log detailed order information including items
+        data.orders?.forEach((order: Order, index: number) => {
+          console.log(`Order ${index + 1}:`, {
+            orderId: order.orderId,
+            status: order.status,
+            date: order.date,
+            total: order.total,
+            itemsCount: order.items?.length || 0,
+            items: order.items
+          });
+        });
+      } else {
+        console.log('Failed to fetch orders:', data.message || 'Unknown error');
+        setOrders([]);
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      setOrders([]);
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
+  // Function to handle password update
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validation
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      toast.error('All fields are required');
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error('New password and confirm password do not match');
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      toast.error('New password must be at least 6 characters long');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/update-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword
+        }),
+      });
+
+      const data = await response.json();
+      console.log('Password update response:', data);
+
+      if (response.ok && data.status === true) {
+        toast.success('Password updated successfully!');
+        setPasswordForm({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+        setIsChangingPassword(false);
+      } else {
+        toast.error(data.message || 'Failed to update password');
+      }
+    } catch (error) {
+      console.error('Error updating password:', error);
+      toast.error('Failed to update password. Please try again.');
     }
   };
 
@@ -223,6 +339,9 @@ export default function ProfilePage() {
               
               // Fetch address data after user data is loaded
               await fetchUserAddress();
+              
+              // Fetch orders after user data is loaded
+              await fetchUserOrders();
               
               console.log('Setting loading to false - success path');
               setLoading(false);
@@ -736,13 +855,83 @@ export default function ProfilePage() {
                     <CardTitle className="text-[#111111] text-lg font-medium">Order History</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-center py-12">
-                      <ShoppingBag className="w-12 h-12 text-[#ffcb74] mx-auto mb-4" />
-                      <p className="text-[#666666] mb-4">No orders yet</p>
-                      <Button className="bg-[#ffcb74] text-[#111111] hover:bg-[#f6f6f6]">
-                        Start Shopping
-                      </Button>
-                    </div>
+                    {ordersLoading ? (
+                      <div className="text-center py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#ffcb74] border-t-transparent mx-auto"></div>
+                        <div className="mt-4 text-[#666666]">Loading orders...</div>
+                      </div>
+                    ) : orders.length === 0 ? (
+                      <div className="text-center py-12">
+                        <ShoppingBag className="w-12 h-12 text-[#ffcb74] mx-auto mb-4" />
+                        <p className="text-[#666666] mb-4">No orders yet</p>
+                        <Button className="bg-[#ffcb74] text-[#111111] hover:bg-[#f6f6f6]">
+                          Start Shopping
+                        </Button>
+                      </div>
+                    ) : (
+                      <ScrollArea className="h-96 pr-4">
+                        <div className="space-y-6">
+                          {orders.map((order) => (
+                            <div key={order.orderId} className="border border-[#e5e5e5] rounded-lg p-6">
+                              {/* Order Header */}
+                              <div className="flex justify-between items-start mb-4">
+                                <div>
+                                  <h3 className="text-lg font-semibold text-[#111111] mb-2">
+                                    Order #{order.orderId}
+                                  </h3>
+                                  <div className="flex items-center gap-4 text-sm text-[#666666]">
+                                    <span>Date: {new Date(order.date).toLocaleDateString()}</span>
+                                    <span>Total: ${order.total.toFixed(2)}</span>
+                                  </div>
+                                </div>
+                                <Badge className={cn(
+                                  "text-xs font-semibold",
+                                  order.status === 'DELIVERED' ? 'bg-green-100 text-green-800' :
+                                  order.status === 'ON-DELIVERY' ? 'bg-blue-100 text-blue-800' :
+                                  order.status === 'PACKED' ? 'bg-yellow-100 text-yellow-800' :
+                                  order.status === 'paid' ? 'bg-purple-100 text-purple-800' :
+                                  'bg-gray-100 text-gray-800'
+                                )}>
+                                  {order.status}
+                                </Badge>
+                              </div>
+
+                              {/* Order Items */}
+                              <div className="border-t border-[#e5e5e5] pt-4">
+                                <h4 className="text-sm font-medium text-[#111111] mb-3">Order Items</h4>
+                                <div className="space-y-3">
+                                  {order.items.map((item, index) => (
+                                    <div key={index} className="flex justify-between items-center py-2 border-b border-[#f6f6f6] last:border-b-0">
+                                      <div className="flex-1">
+                                        <div className="font-medium text-[#111111]">{item.productName}</div>
+                                        <div className="text-sm text-[#666666]">
+                                          Quantity: {item.qty} × ${item.price.toFixed(2)}
+                                        </div>
+                                      </div>
+                                      <div className="text-right">
+                                        <div className="font-medium text-[#111111]">
+                                          ${item.total.toFixed(2)}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Order Summary */}
+                              <div className="border-t border-[#e5e5e5] pt-4 mt-4">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm font-medium text-[#111111]">Order Total:</span>
+                                  <span className="text-lg font-semibold text-[#111111]">
+                                    ${order.total.toFixed(2)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -753,7 +942,8 @@ export default function ProfilePage() {
                     <CardTitle className="text-[#111111] text-lg font-medium">Account Settings</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
+                    <div className="space-y-6">
+                      {/* Email Notifications */}
                       <div className="flex items-center justify-between py-3">
                         <span className="text-[#111111]">Email Notifications</span>
                         <Button variant="outline" size="sm" className="border-[#e5e5e5] text-[#666666]">
@@ -761,6 +951,8 @@ export default function ProfilePage() {
                         </Button>
                       </div>
                       <Separator className="bg-[#e5e5e5]" />
+                      
+                      {/* Privacy Settings */}
                       <div className="flex items-center justify-between py-3">
                         <span className="text-[#111111]">Privacy Settings</span>
                         <Button variant="outline" size="sm" className="border-[#e5e5e5] text-[#666666]">
@@ -768,11 +960,94 @@ export default function ProfilePage() {
                         </Button>
                       </div>
                       <Separator className="bg-[#e5e5e5]" />
-                      <div className="flex items-center justify-between py-3">
-                        <span className="text-[#111111]">Change Password</span>
-                        <Button variant="outline" size="sm" className="border-[#e5e5e5] text-[#666666]">
-                          Update
-                        </Button>
+                      
+                      {/* Change Password */}
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between py-3">
+                          <span className="text-[#111111]">Change Password</span>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="border-[#e5e5e5] text-[#666666]"
+                            onClick={() => setIsChangingPassword(!isChangingPassword)}
+                          >
+                            {isChangingPassword ? 'Cancel' : 'Update'}
+                          </Button>
+                        </div>
+                        
+                        {isChangingPassword && (
+                          <div className="border border-[#e5e5e5] rounded-lg p-4 bg-[#f9f9f9]">
+                            <form onSubmit={handlePasswordUpdate} className="space-y-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="currentPassword" className="text-[#111111] text-sm font-medium">
+                                  Current Password
+                                </Label>
+                                <Input
+                                  id="currentPassword"
+                                  type="password"
+                                  value={passwordForm.currentPassword}
+                                  onChange={(e) => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
+                                  className="bg-white border-[#e5e5e5] text-[#111111] focus:border-[#ffcb74] focus:ring-1 focus:ring-[#ffcb74]"
+                                  placeholder="Enter your current password"
+                                />
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <Label htmlFor="newPassword" className="text-[#111111] text-sm font-medium">
+                                  New Password
+                                </Label>
+                                <Input
+                                  id="newPassword"
+                                  type="password"
+                                  value={passwordForm.newPassword}
+                                  onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                                  className="bg-white border-[#e5e5e5] text-[#111111] focus:border-[#ffcb74] focus:ring-1 focus:ring-[#ffcb74]"
+                                  placeholder="Enter your new password"
+                                />
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <Label htmlFor="confirmPassword" className="text-[#111111] text-sm font-medium">
+                                  Confirm New Password
+                                </Label>
+                                <Input
+                                  id="confirmPassword"
+                                  type="password"
+                                  value={passwordForm.confirmPassword}
+                                  onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                                  className="bg-white border-[#e5e5e5] text-[#111111] focus:border-[#ffcb74] focus:ring-1 focus:ring-[#ffcb74]"
+                                  placeholder="Confirm your new password"
+                                />
+                              </div>
+                              
+                              <div className="flex gap-2">
+                                <Button 
+                                  type="submit"
+                                  size="sm"
+                                  className="bg-[#ffcb74] text-[#111111] hover:bg-[#f6f6f6]"
+                                >
+                                  Update Password
+                                </Button>
+                                <Button 
+                                  type="button"
+                                  variant="outline" 
+                                  size="sm"
+                                  className="border-[#e5e5e5] text-[#666666] hover:bg-[#f6f6f6]"
+                                  onClick={() => {
+                                    setIsChangingPassword(false);
+                                    setPasswordForm({
+                                      currentPassword: '',
+                                      newPassword: '',
+                                      confirmPassword: ''
+                                    });
+                                  }}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </form>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -795,14 +1070,14 @@ export default function ProfilePage() {
                       <ShoppingBag className="w-4 h-4 text-[#ffcb74]" />
                       <span className="text-[#666666] text-sm">Orders</span>
                     </div>
-                    <Badge className="bg-[#f6f6f6] text-[#111111] border border-[#e5e5e5]">12</Badge>
+                    <Badge className="bg-[#f6f6f6] text-[#111111] border border-[#e5e5e5]">{orders.length}</Badge>
                   </div>
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                       <Heart className="w-4 h-4 text-[#ffcb74]" />
                       <span className="text-[#666666] text-sm">Wishlist</span>
                     </div>
-                    <Badge className="bg-[#f6f6f6] text-[#111111] border border-[#e5e5e5]">8</Badge>
+                    <Badge className="bg-[#f6f6f6] text-[#111111] border border-[#e5e5e5]">{wishlistCount}</Badge>
                   </div>
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
