@@ -17,6 +17,8 @@ import { useAuth } from '@/lib/auth-hook';
 import { useCart } from '@/lib/cart-context';
 import { useWishlist } from '@/lib/wishlist-context';
 import { toast } from 'sonner';
+import { getRandomProducts } from '@/lib/utils';
+import Link from 'next/link';
 
 // TypeScript interfaces for the product data
 interface ProductColor {
@@ -64,6 +66,8 @@ const ProductPage = () => {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(true);
 
   // Fetch product data when component mounts
   useEffect(() => {
@@ -117,40 +121,24 @@ const ProductPage = () => {
     }
   }, [product]);
 
-  const recommendations = [
-    {
-      id: 1,
-      title: 'Polo with Contrast Trims',
-      image: '/p1.png',
-      rating: 4.0,
-      price: 212,
-      originalPrice: 239,
-      discount: 25
-    },
-    {
-      id: 2,
-      title: 'Gradient Graphic T-shirt',
-      image: '/p2.png',
-      rating: 3.6,
-      price: 145
-    },
-    {
-      id: 3,
-      title: 'Polo with Tipping Details',
-      image: '/p3.png',
-      rating: 4.5,
-      price: 180
-    },
-    {
-      id: 4,
-      title: 'Striped Jacket',
-      image: '/p4.png',
-      rating: 5.0,
-      price: 190,
-      originalPrice: 210,
-      discount: 20
+  // Fetch random recommendations
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      setIsLoadingRecommendations(true);
+      try {
+        const randomProducts = await getRandomProducts(parseInt(productId as string), 4);
+        setRecommendations(randomProducts);
+      } catch (error) {
+        console.error('Error fetching recommendations:', error);
+      } finally {
+        setIsLoadingRecommendations(false);
+      }
+    };
+
+    if (productId) {
+      fetchRecommendations();
     }
-  ];
+  }, [productId]);
 
   const handleAddToCart = async () => {
     if (!isAuthenticated) {
@@ -557,43 +545,47 @@ const ProductPage = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-              {recommendations.map((item) => (
-                <div key={item.id} className="group cursor-pointer">
-                  <Card className="overflow-hidden">
-                    <CardContent className="p-0">
-                      <div className="aspect-square">
-                        <img
-                          src={item.image}
-                          alt={item.title}
-                          className="w-full h-full object-contain p-2 sm:p-4 group-hover:scale-105 transition-transform duration-300"
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <div className="mt-3 lg:mt-4 space-y-2">
-                    <h3 className="font-medium text-xs sm:text-sm line-clamp-2">{item.title}</h3>
-                    <div className="flex items-center gap-1 lg:gap-2">
-                      <div className="flex gap-0.5 lg:gap-1">
-                        {renderStars(item.rating)}
-                      </div>
-                      <span className="text-xs text-muted-foreground">{item.rating}</span>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-sm">${item.price}</span>
-                      {item.originalPrice && (
-                        <>
-                          <span className="text-xs text-muted-foreground line-through">${item.originalPrice}</span>
-                          <Badge variant="secondary" className="text-xs">
-                            -{item.discount}%
-                          </Badge>
-                        </>
-                      )}
-                    </div>
+            {isLoadingRecommendations ? (
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div key={index} className="animate-pulse">
+                    <div className="aspect-square bg-muted rounded-lg mb-3"></div>
+                    <div className="h-4 bg-muted rounded mb-2"></div>
+                    <div className="h-3 bg-muted rounded w-2/3"></div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+                {recommendations.map((item) => (
+                  <Link key={item.id} href={`/product/${item.id}`} className="group cursor-pointer">
+                    <Card className="overflow-hidden">
+                      <CardContent className="p-0">
+                        <div className="aspect-square">
+                          <img
+                            src={item.imageUrls?.[0] || '/p1.png'}
+                            alt={item.name}
+                            className="w-full h-full object-contain p-2 sm:p-4 group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <div className="mt-3 lg:mt-4 space-y-2">
+                      <h3 className="font-medium text-xs sm:text-sm line-clamp-2">{item.name}</h3>
+                      <div className="flex items-center gap-1 lg:gap-2">
+                        <div className="flex gap-0.5 lg:gap-1">
+                          {renderStars(4)}
+                        </div>
+                        <span className="text-xs text-muted-foreground">4.0</span>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-sm">${item.basePrice?.toFixed(2) || '0.00'}</span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -9,44 +9,15 @@ import { Minus, Plus, Trash2 } from "lucide-react";
 import { useAuth } from '@/lib/auth-hook';
 import { useCart } from '@/lib/cart-context';
 import { toast } from "sonner";
-
-// Dummy recommended products
-const RECOMMENDED = [
-  {
-    id: 101,
-    name: "Urban Windbreaker",
-    image: "/p3.png",
-    price: 89.0,
-    details: "Size: M\nColor: Blue",
-  },
-  {
-    id: 102,
-    name: "Classic Hoodie",
-    image: "/p4.png",
-    price: 59.0,
-    details: "Size: XL\nColor: Black",
-  },
-  {
-    id: 103,
-    name: "Lightweight Parka",
-    image: "/p1.png",
-    price: 99.0,
-    details: "Size: S\nColor: Olive",
-  },
-  {
-    id: 104,
-    name: "Rain Shell Jacket",
-    image: "/p2.png",
-    price: 109.0,
-    details: "Size: L\nColor: Navy",
-  },
-];
+import { getRandomProducts } from "@/lib/utils";
 
 export default function CartPage() {
   const { isAuthenticated } = useAuth();
   const { cartItems, cartTotalPrice, isLoading, isUpdating, updateCartItem, removeFromCart } = useCart();
   const [error, setError] = useState<string | null>(null);
   const [updatingItems, setUpdatingItems] = useState<Set<number>>(new Set());
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(true);
 
   // Check authentication only - cart data is fetched by the context on mount
   useEffect(() => {
@@ -56,6 +27,23 @@ export default function CartPage() {
       setError(null);
     }
   }, [isAuthenticated]);
+
+  // Fetch random recommendations
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      setIsLoadingRecommendations(true);
+      try {
+        const randomProducts = await getRandomProducts(undefined, 4);
+        setRecommendations(randomProducts);
+      } catch (error) {
+        console.error('Error fetching recommendations:', error);
+      } finally {
+        setIsLoadingRecommendations(false);
+      }
+    };
+
+    fetchRecommendations();
+  }, []);
 
   const updateQuantity = async (id: number, delta: number) => {
     const currentItem = cartItems.find(item => item.id === id);
@@ -308,41 +296,51 @@ export default function CartPage() {
         {/* Recommended Products */}
         <div className="mt-20">
           <h2 className="text-2xl font-light mb-8 text-center">You might also like</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {RECOMMENDED.map((prod) => (
-              <div key={prod.id} className="group">
-                <div className="bg-card border border-border rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300">
-                  <div className="aspect-square bg-muted flex items-center justify-center p-4">
-                    <Image 
-                      src={prod.image} 
-                      alt={prod.name} 
-                      width={160} 
-                      height={160} 
-                      className="object-contain w-full h-full bg-white rounded-md" 
-                    />
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-medium text-base mb-2">{prod.name}</h3>
-                    <div className="text-sm text-muted-foreground mb-3 space-y-1">
-                      {prod.details.split('\n').map((line, i) => (
-                        <div key={i}>{line}</div>
-                      ))}
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-lg text-primary">${prod.price.toFixed(2)}</span>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        View
-                      </Button>
-                    </div>
-                  </div>
+          {isLoadingRecommendations ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="animate-pulse">
+                  <div className="aspect-square bg-muted rounded-lg mb-3"></div>
+                  <div className="h-4 bg-muted rounded mb-2"></div>
+                  <div className="h-3 bg-muted rounded w-2/3"></div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {recommendations.map((prod) => (
+                <Link key={prod.id} href={`/product/${prod.id}`} className="group">
+                  <div className="bg-card border border-border rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                    <div className="aspect-square bg-muted flex items-center justify-center p-4">
+                      <Image 
+                        src={prod.imageUrls?.[0] || '/p1.png'} 
+                        alt={prod.name} 
+                        width={160} 
+                        height={160} 
+                        className="object-contain w-full h-full bg-white rounded-md" 
+                      />
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-medium text-base mb-2">{prod.name}</h3>
+                      <div className="text-sm text-muted-foreground mb-3 space-y-1">
+                        <div>{prod.description || 'Product description not available'}</div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-lg text-primary">${prod.basePrice?.toFixed(2) || '0.00'}</span>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          View
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       </main>
       <Footer />
