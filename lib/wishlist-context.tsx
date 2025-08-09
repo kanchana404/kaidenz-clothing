@@ -66,14 +66,20 @@ export const WishlistProvider: React.FC<WishlistProviderProps> = ({ children }) 
       console.log('WishlistContext: API response data:', data);
       
       if (response.ok && data.success) {
-        setWishlistItems(data.wishlistItems || []);
-        setWishlistCount(data.count || 0);
-        console.log('WishlistContext: Set wishlist items:', data.wishlistItems || []);
-        console.log('WishlistContext: Wishlist count:', data.count || 0);
+        const newItems = data.wishlistItems || [];
+        const newCount = data.count || 0;
+        
+        console.log('WishlistContext: Setting new wishlist items:', newItems);
+        console.log('WishlistContext: Setting new wishlist count:', newCount);
+        
+        setWishlistItems(newItems);
+        setWishlistCount(newCount);
+        
+        console.log('WishlistContext: State updated successfully');
       } else {
+        console.log('WishlistContext: API call failed, clearing wishlist');
         setWishlistItems([]);
         setWishlistCount(0);
-        console.log('WishlistContext: API call failed, clearing wishlist');
       }
     } catch (error) {
       console.error('WishlistContext: Error fetching wishlist data:', error);
@@ -114,6 +120,23 @@ export const WishlistProvider: React.FC<WishlistProviderProps> = ({ children }) 
 
   const removeFromWishlist = useCallback(async (wishlistItemId: number) => {
     try {
+      console.log('WishlistContext: Starting removal of item:', wishlistItemId);
+      console.log('WishlistContext: Current items before optimistic update:', wishlistItems);
+      
+      // Optimistically remove the item from frontend state
+      setWishlistItems(prevItems => {
+        const updatedItems = prevItems.filter(item => item.id !== wishlistItemId);
+        const newCount = updatedItems.length;
+        
+        console.log('WishlistContext: Optimistic update - filtered items:', updatedItems);
+        console.log('WishlistContext: Optimistic update - new count:', newCount);
+        
+        setWishlistCount(newCount);
+        return updatedItems;
+      });
+
+      console.log('WishlistContext: Optimistic update applied, making API call...');
+
       const response = await fetch('/api/remove-from-wishlist', {
         method: 'POST',
         headers: {
@@ -126,16 +149,23 @@ export const WishlistProvider: React.FC<WishlistProviderProps> = ({ children }) 
       });
 
       const data = await response.json();
+      console.log('WishlistContext: API response:', data);
       
       if (response.ok && data.success) {
-        // Refresh wishlist data after removing item
-        await fetchWishlistData();
+        // Keep the optimistic update since the operation succeeded
+        console.log('WishlistContext: Item removed successfully from backend');
         return { success: true };
       } else {
+        // Revert optimistic update on failure
+        console.log('WishlistContext: Backend removal failed, reverting optimistic update');
+        await fetchWishlistData();
         return { success: false, error: data.error || 'Failed to remove from wishlist' };
       }
     } catch (error) {
       console.error('Error removing from wishlist:', error);
+      // Revert optimistic update on error
+      console.log('WishlistContext: Error occurred, reverting optimistic update');
+      await fetchWishlistData();
       return { success: false, error: 'Network error' };
     }
   }, [fetchWishlistData]);
@@ -161,6 +191,12 @@ export const WishlistProvider: React.FC<WishlistProviderProps> = ({ children }) 
     console.log('WishlistContext: useEffect triggered, calling fetchWishlistData');
     fetchWishlistData();
   }, [fetchWishlistData]);
+
+  // Debug effect to track state changes
+  useEffect(() => {
+    console.log('WishlistContext: wishlistItems state changed:', wishlistItems);
+    console.log('WishlistContext: wishlistCount state changed:', wishlistCount);
+  }, [wishlistItems, wishlistCount]);
 
   const value: WishlistContextType = {
     wishlistCount,

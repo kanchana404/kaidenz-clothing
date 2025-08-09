@@ -22,6 +22,9 @@ export async function POST(request: NextRequest) {
       body: `wishlistId=${wishlistItemId}`, // Changed from wishlistItemId to wishlistId
     });
 
+    console.log("Backend response status:", backendRes.status);
+    console.log("Backend response headers:", Object.fromEntries(backendRes.headers.entries()));
+
     if (!backendRes.ok) {
       console.log("Backend response not ok:", backendRes.status, backendRes.statusText);
       return NextResponse.json(
@@ -45,14 +48,19 @@ export async function POST(request: NextRequest) {
     }
 
     if (data.status) {
+      console.log("=== REMOVE FROM WISHLIST SUCCESS ===");
+      console.log("Backend successfully removed item, returning success response");
       return NextResponse.json({ success: true, message: data.message });
     } else {
+      console.log("=== REMOVE FROM WISHLIST FAILED ===");
+      console.log("Backend failed to remove item:", data.message);
       return NextResponse.json(
         { success: false, error: data.message || "Failed to remove from wishlist" },
         { status: 400 }
       );
     }
   } catch (error) {
+    console.error("=== REMOVE FROM WISHLIST ERROR ===");
     console.error("Error in remove-from-wishlist API route:", error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },

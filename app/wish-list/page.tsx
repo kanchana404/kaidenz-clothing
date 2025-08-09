@@ -1,6 +1,6 @@
 "use client"
 import { useState, useEffect } from 'react';
-import { Heart, Plus, X, Star, ExternalLink, Share2, ShoppingCart, Eye } from 'lucide-react';
+import { Heart, Plus, X, Star, ExternalLink, Share2, ShoppingCart, Eye, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -46,11 +46,24 @@ export default function WishlistPage() {
     }
   }, [isAuthenticated, fetchWishlistData]);
 
+  // Debug effect to log when wishlist items change
+  useEffect(() => {
+    console.log('WishlistPage: wishlistItems changed:', wishlistItems);
+    console.log('WishlistPage: Current count:', wishlistItems.length);
+  }, [wishlistItems]);
+
   const removeItem = async (id: number) => {
+    console.log('WishlistPage: Removing item with ID:', id);
+    console.log('WishlistPage: Current wishlist items before removal:', wishlistItems);
+    
     const result = await removeFromWishlist(id);
+    
     if (result.success) {
+      console.log('WishlistPage: Item removed successfully');
+      console.log('WishlistPage: Current wishlist items after removal:', wishlistItems);
       toast.success('Item removed from wishlist');
     } else {
+      console.error('WishlistPage: Failed to remove item:', result.error);
       toast.error(result.error || 'Failed to remove item');
     }
   };
@@ -127,6 +140,18 @@ export default function WishlistPage() {
               <Share2 className="w-4 h-4" />
               Share List
             </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="gap-2 border-gray-300 text-gray-600 hover:bg-gray-50"
+              onClick={() => {
+                console.log('WishlistPage: Manual refresh button clicked');
+                fetchWishlistData();
+              }}
+            >
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </Button>
             <div className="flex items-center gap-4 text-sm text-gray-500">
               <span>{wishlistItems.length} items</span>
               <span>•</span>
@@ -134,6 +159,8 @@ export default function WishlistPage() {
             </div>
           </div>
         </header>
+
+       
 
         {/* Loading State */}
         {isLoading ? (
