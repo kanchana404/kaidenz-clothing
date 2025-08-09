@@ -1,40 +1,51 @@
-import { NextRequest, NextResponse } from 'next/server';
+// app/api/cart/route.ts (PUT)  — Next.js API route that forwards auth + body
+import { NextRequest, NextResponse } from "next/server";
 
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    
-    // Grab cookies from the incoming request
-    const cookie = request.headers.get('cookie') || '';
-    
-    const response = await fetch('http://localhost:8080/kaidenz/UpdateCart', {
-      method: 'PUT',
+
+    // Forward all incoming cookies
+    const incomingCookieHeader = request.headers.get("cookie") || "";
+
+    // Extract a stable user id (use your real auth/JWT in production)
+    const m = incomingCookieHeader.match(/(?:^|;\s*)user_id=([^;]+)/);
+    const resolvedUserId = m ? decodeURIComponent(m[1]) : undefined;
+
+    const backendRes = await fetch("http://localhost:8080/kaidenz/UpdateCart", {
+      method: "PUT",
       headers: {
-        'Content-Type': 'application/json',
-        'Cookie': cookie, // forward session cookie
+        "Content-Type": "application/json",
+        ...(incomingCookieHeader ? { Cookie: incomingCookieHeader } : {}),
+        ...(resolvedUserId ? { "X-User-Id": resolvedUserId } : {}),
       },
       body: JSON.stringify(body),
     });
 
-    const data = await response.json();
-    
-    return NextResponse.json(data, { status: response.status });
-  } catch (error) {
-    console.error('Error updating cart:', error);
+    const data = await backendRes.json().catch(() => ({}));
     return NextResponse.json(
-      { success: false, error: 'Failed to update cart' },
+      backendRes.ok ? data : { success: false, error: data?.error || "Failed to update cart" },
+      { status: backendRes.status }
+    );
+  } catch (err) {
+    console.error("Error updating cart:", err);
+    return NextResponse.json(
+      { success: false, error: "Failed to update cart" },
       { status: 500 }
     );
   }
 }
 
+// (Optional) If you really need this for your own API route:
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
     headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      // This OPTIONS is for your Next.js route only; backend CORS is handled in Java
+      "Access-Control-Allow-Origin": "http://localhost:3000",
+      "Access-Control-Allow-Methods": "PUT, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Cookie, Authorization, X-User-Id",
+      "Access-Control-Allow-Credentials": "true",
     },
   });
-} 
+}
